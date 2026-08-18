@@ -1,0 +1,2392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FORM — Store</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#F4F5F3; --card:#FFFFFF; --field:#EDEEEB;
+  --ink:#1A1C1A; --muted:#6B6F6B;
+  --line:#E2E4E0; --line-strong:#CBD0C9;
+  --accent:#2F4739; --on-accent:#FFFFFF; --danger:#8C2F26; --warn:#8A5A1E;
+  --radius:3px;
+  --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans:"Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+*{ margin:0; padding:0; box-sizing:border-box; }
+[hidden]{ display:none !important; }
+html{ -webkit-text-size-adjust:100%; }
+body{ font-family:var(--sans); background:var(--paper); color:var(--ink);
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+.wrap{ max-width:1280px; margin:0 auto; padding:0 24px; }
+:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+button{ font-family:inherit; color:inherit; cursor:pointer; }
+.mono{ font-family:var(--mono); font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--muted); }
+
+/* шапка */
+.site-header{ position:sticky; top:0; z-index:60;
+  background:rgba(244,245,243,.86); backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line); }
+.site-header .wrap{ height:64px; display:flex; align-items:center;
+  justify-content:space-between; gap:16px; }
+.brand{ font-size:19px; font-weight:700; letter-spacing:-.03em;
+  display:flex; align-items:baseline; gap:8px; }
+.brand span{ font-family:var(--mono); font-size:10px; font-weight:400;
+  letter-spacing:.18em; color:var(--muted); text-transform:uppercase; }
+.cart-btn{ display:flex; align-items:center; gap:10px;
+  font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--muted); background:transparent;
+  border:1px solid var(--line-strong); border-radius:100px; padding:7px 14px;
+  transition:border-color .18s, color .18s; }
+.cart-btn:hover{ color:var(--ink); border-color:var(--ink); }
+.cart-btn b{ font-family:var(--sans); font-size:12px; letter-spacing:0; font-weight:600;
+  min-width:18px; height:18px; padding:0 5px; border-radius:100px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--line); color:var(--ink); transition:background .2s, color .2s; }
+.cart-btn.filled b{ background:var(--accent); color:var(--on-accent); }
+
+/* геро + фільтри */
+.hero{ padding:72px 0 40px; }
+.hero .eyebrow{ margin-bottom:20px; }
+.hero h1{ font-size:clamp(34px,6vw,62px); font-weight:600;
+  letter-spacing:-.035em; line-height:1.02; max-width:16ch; }
+.filters{ display:flex; gap:28px; align-items:center; flex-wrap:wrap;
+  border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+  padding:14px 0; margin-bottom:36px; }
+.filter-btn{ background:none; border:none; padding:2px 0;
+  font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--muted); border-bottom:1px solid transparent;
+  transition:color .18s, border-color .18s; }
+.filter-btn:hover{ color:var(--ink); }
+.filter-btn.active{ color:var(--ink); border-bottom-color:var(--ink); }
+.filters .count{ margin-left:auto; }
+
+.status{ display:none; margin-bottom:28px; padding:14px 16px;
+  border:1px solid var(--line); border-radius:var(--radius);
+  font-size:14px; background:var(--card); }
+.status.loading{ display:block; color:var(--muted); }
+.status.error{ display:block; color:var(--danger); border-color:#E8CFCC; background:#FBF3F2; }
+
+/* сітка */
+.grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+  column-gap:24px; row-gap:44px; padding-bottom:96px; }
+.card{ background:none; border:none; padding:0; text-align:left;
+  display:flex; flex-direction:column; gap:14px; }
+.card-media{ position:relative; overflow:hidden; background:var(--field);
+  border-radius:var(--radius); aspect-ratio:3/4; }
+.card-media img{ width:100%; height:100%; object-fit:contain; padding:22px;
+  transition:transform .5s cubic-bezier(.2,.7,.3,1); }
+.card:hover .card-media img{ transform:scale(1.045); }
+/* розпроданий товар: знебарвлений, приглушений, з накладкою */
+.card.sold-out .card-media{ background:#E9EAE7; }
+.card.sold-out .card-media img{ filter:grayscale(1); opacity:.35; }
+.card.sold-out:hover .card-media img{ transform:none; }
+.card.sold-out .card-name,
+.card.sold-out .card-price{ color:var(--muted); }
+.card.sold-out .card-price{ text-decoration:line-through; }
+.card.sold-out .card-swatches{ display:none; }
+
+.badge{ position:absolute; top:12px; left:12px; z-index:1;
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  background:var(--card); border:1px solid var(--line-strong);
+  border-radius:100px; padding:4px 10px; }
+.badge.low{ color:var(--warn); border-color:#E0CBA8; background:#FBF6EE; }
+.badge.out{ background:var(--ink); color:#fff; border-color:var(--ink); }
+.card-swatches{ position:absolute; left:12px; bottom:12px; display:flex; gap:5px;
+  align-items:center; opacity:0; transform:translateY(4px);
+  transition:opacity .22s, transform .22s; }
+.card:hover .card-swatches,.card:focus-visible .card-swatches{ opacity:1; transform:none; }
+.dot{ width:11px; height:11px; border-radius:100px;
+  border:1px solid rgba(0,0,0,.18); display:inline-block; flex:none; }
+.card-body{ display:flex; flex-direction:column; gap:5px; }
+.card-name{ font-size:15px; font-weight:500; letter-spacing:-.01em; line-height:1.3; }
+.card-price{ font-family:var(--mono); font-size:13px; }
+
+/* модалка */
+.modal-backdrop{ position:fixed; inset:0; z-index:200;
+  background:rgba(26,28,26,.42); backdrop-filter:blur(3px);
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none; transition:opacity .25s; }
+@media (min-width:760px){ .modal-backdrop{ align-items:center; padding:32px; } }
+.modal-backdrop.open{ opacity:1; pointer-events:auto; }
+.modal{ background:var(--card); width:100%; max-width:960px; max-height:92vh;
+  overflow-y:auto; border-radius:var(--radius) var(--radius) 0 0; position:relative;
+  transform:translateY(24px); transition:transform .3s cubic-bezier(.2,.7,.3,1); }
+@media (min-width:760px){ .modal{ border-radius:var(--radius); } }
+.modal-backdrop.open .modal{ transform:none; }
+.modal-inner{ display:grid; grid-template-columns:1fr; }
+@media (min-width:760px){ .modal-inner{ grid-template-columns:1fr 1fr; } }
+.modal-media{ background:var(--field); display:flex; align-items:center;
+  justify-content:center; padding:36px; }
+.modal-media img{ width:100%; max-height:460px; object-fit:contain; }
+.modal-info{ padding:28px 28px 32px; display:flex; flex-direction:column; gap:22px; }
+@media (min-width:760px){ .modal-info{ padding:40px 40px 44px; } }
+.icon-close{ position:absolute; top:14px; right:16px; z-index:2;
+  background:var(--card); border:1px solid var(--line);
+  width:34px; height:34px; border-radius:100px; font-size:17px; line-height:1;
+  color:var(--muted); display:flex; align-items:center; justify-content:center; }
+.icon-close:hover{ color:var(--ink); border-color:var(--line-strong); }
+.modal-title{ font-size:26px; font-weight:600; letter-spacing:-.025em; line-height:1.15; }
+.modal-price{ font-family:var(--mono); font-size:16px; }
+.modal-desc{ font-size:14px; color:var(--muted); line-height:1.6; }
+.choice{ display:flex; flex-direction:column; gap:11px; }
+.choice-head{ display:flex; align-items:baseline; gap:8px; }
+.choice-head .value{ font-family:var(--sans); font-size:12px; letter-spacing:0;
+  text-transform:none; color:var(--ink); font-weight:500; }
+.chips{ display:flex; flex-wrap:wrap; gap:8px; }
+.chip-color{ display:inline-flex; align-items:center; gap:8px;
+  border:1px solid var(--line-strong); background:var(--card);
+  border-radius:100px; padding:7px 14px 7px 10px; font-size:13px;
+  transition:border-color .18s, background .18s; }
+.chip-color:hover:not(:disabled){ border-color:var(--ink); }
+.chip-color[aria-pressed="true"]{ border-color:var(--ink); background:var(--ink); color:#fff; }
+.chip-color[aria-pressed="true"] .dot{ border-color:rgba(255,255,255,.5); }
+.chip-color:disabled{ color:var(--line-strong); border-color:var(--line);
+  text-decoration:line-through; cursor:not-allowed; }
+.chip-size{ min-width:52px; padding:9px 12px;
+  border:1px solid var(--line-strong); background:var(--card); border-radius:var(--radius);
+  font-family:var(--mono); font-size:12px; text-align:center;
+  transition:border-color .18s, background .18s, color .18s; }
+.chip-size:hover:not(:disabled){ border-color:var(--ink); }
+.chip-size[aria-pressed="true"]{ border-color:var(--ink); background:var(--ink); color:#fff; }
+.chip-size:disabled{ color:var(--line-strong); border-color:var(--line);
+  text-decoration:line-through; cursor:not-allowed; }
+.stock-note{ font-family:var(--mono); font-size:11px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--muted); }
+.stock-note.low{ color:var(--warn); }
+.stepper{ display:inline-flex; align-items:center;
+  border:1px solid var(--line-strong); border-radius:var(--radius); overflow:hidden; }
+.stepper button{ width:38px; height:40px; border:none; background:var(--card);
+  font-size:16px; line-height:1; color:var(--ink); transition:background .15s; }
+.stepper button:hover:not(:disabled){ background:var(--field); }
+.stepper button:disabled{ color:var(--line-strong); cursor:not-allowed; }
+.stepper .qty{ min-width:44px; text-align:center; font-family:var(--mono); font-size:13px;
+  border-left:1px solid var(--line); border-right:1px solid var(--line);
+  height:40px; display:flex; align-items:center; justify-content:center; }
+.add-btn{ border:none; border-radius:var(--radius);
+  background:var(--accent); color:var(--on-accent);
+  padding:16px 20px; font-size:14px; font-weight:500; letter-spacing:.01em;
+  transition:opacity .18s; }
+.add-btn:hover:not(:disabled){ opacity:.88; }
+.add-btn:disabled{ background:var(--line); color:var(--muted); cursor:not-allowed; }
+.modal-meta{ font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--muted);
+  border-top:1px solid var(--line); padding-top:16px; }
+
+/* ============ віртуальна примірка (М6) ============ */
+.btn-ghost{ border:1px solid var(--line-strong); background:var(--card); color:var(--ink);
+  border-radius:var(--radius); padding:15px 20px; font-size:14px; font-weight:500;
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  transition:border-color .18s, background .18s, color .18s; }
+.btn-ghost:hover:not(:disabled){ border-color:var(--ink); }
+.btn-ghost:disabled{ color:var(--muted); border-color:var(--line); cursor:not-allowed; }
+.btn-ghost .tag{ font-family:var(--mono); font-size:9px; letter-spacing:.14em;
+  text-transform:uppercase; background:var(--accent); color:var(--on-accent);
+  border-radius:100px; padding:3px 8px; }
+
+/* примірка стоїть НАД карткою товару — власний шар */
+.tryon-backdrop{ z-index:250; }
+.tryon-modal{ max-width:1020px; }
+/* ліва колонка — сцена: спершу порожня, потім фото, потім результат */
+.tryon-stage{ background:var(--field); position:relative;
+  display:flex; align-items:center; justify-content:center;
+  min-height:340px; padding:24px; }
+@media (min-width:760px){ .tryon-stage{ min-height:560px; } }
+.tryon-stage img{ max-width:100%; max-height:512px; object-fit:contain;
+  border-radius:var(--radius); }
+.tryon-empty{ display:flex; flex-direction:column; align-items:center; gap:14px;
+  text-align:center; padding:32px 20px; }
+.tryon-empty .frame{ width:74px; height:96px; border:1px dashed var(--line-strong);
+  border-radius:var(--radius); position:relative; }
+/* умовний силует: голова + плечі, натяк на потрібний кадр */
+.tryon-empty .frame::before{ content:""; position:absolute; left:50%; top:22px;
+  width:20px; height:20px; margin-left:-10px; border-radius:100px;
+  background:var(--line-strong); }
+.tryon-empty .frame::after{ content:""; position:absolute; left:50%; top:46px;
+  width:44px; height:30px; margin-left:-22px; border-radius:22px 22px 0 0;
+  background:var(--line-strong); }
+
+/* мініатюра речі, яку міряємо */
+.tryon-garment{ display:flex; gap:14px; align-items:center;
+  border:1px solid var(--line); border-radius:var(--radius); padding:11px; }
+.tryon-garment img{ width:54px; height:66px; flex:0 0 54px; object-fit:contain;
+  background:var(--field); border-radius:var(--radius); padding:4px; }
+.tryon-garment .g-body{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.tryon-garment .g-name{ font-size:13px; font-weight:500; line-height:1.3; }
+.tryon-garment .g-note{ font-size:12px; color:var(--muted); line-height:1.4; }
+
+.tryon-note{ font-size:12.5px; color:var(--muted); line-height:1.55; }
+.tryon-note strong{ color:var(--ink); font-weight:500; }
+.tryon-privacy{ font-family:var(--mono); font-size:10px; letter-spacing:.07em;
+  line-height:1.7; text-transform:uppercase; color:var(--muted);
+  border-top:1px solid var(--line); padding-top:14px; }
+.tryon-error{ background:#FBF3F2; color:var(--danger); border:1px solid #E8CFCC;
+  border-radius:var(--radius); padding:11px 13px; font-size:13px; line-height:1.5; }
+
+/* поки йде генерація: фото гасне, знизу смуга й підпис етапу */
+.tryon-stage.working img{ opacity:.38; filter:blur(1px); transition:opacity .3s, filter .3s; }
+.tryon-progress{ position:absolute; left:24px; right:24px; bottom:24px;
+  display:flex; flex-direction:column; gap:9px; }
+.tryon-progress .bar{ height:2px; background:var(--line-strong);
+  border-radius:100px; overflow:hidden; }
+.tryon-progress .bar span{ display:block; height:100%; width:0;
+  background:var(--accent); transition:width .95s linear; }
+.tryon-progress p{ text-align:center; }
+.tryon-keep{ font-size:12.5px; color:var(--warn); line-height:1.5; }
+.tryon-usage{ font-family:var(--mono); font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--muted); }
+/* у заблокованому стані кнопка пояснює, чого бракує — значок зайвий */
+.btn-ghost:disabled .tag{ display:none; }
+
+/* примірочна */
+.head-actions{ display:flex; align-items:center; gap:9px; }
+.fit-row{ display:grid; grid-template-columns:96px 1fr; gap:14px;
+  padding:18px 0; border-bottom:1px solid var(--line); align-items:start; }
+.fit-row .shot{ display:block; width:96px; aspect-ratio:3/4; object-fit:cover;
+  object-position:top; background:var(--field); border-radius:var(--radius); }
+.fit-info{ display:flex; flex-direction:column; gap:5px; min-width:0; }
+.fit-name{ font-size:14px; font-weight:500; line-height:1.3; }
+.fit-variant{ font-family:var(--mono); font-size:11px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--muted); }
+.fit-actions{ display:flex; gap:7px; flex-wrap:wrap; margin-top:7px; }
+/* речі всередині одного образу — кожна відкриває свій товар */
+.fit-items{ display:flex; flex-direction:column; gap:4px; margin:2px 0 2px; }
+.fit-item{ background:none; border:none; padding:0; text-align:left;
+  font-size:13px; line-height:1.35; color:var(--ink);
+  display:flex; gap:7px; align-items:baseline; flex-wrap:wrap; }
+.fit-item span{ font-family:var(--mono); font-size:10px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted); }
+.fit-item:hover{ text-decoration:underline; text-underline-offset:3px; }
+.fit-count{ font-family:var(--mono); font-size:11px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--muted); }
+
+/* вибір основи для примірки: своє фото або будь-який збережений образ */
+.tryon-bases{ display:flex; flex-direction:column; gap:9px; }
+.base-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+.base-tile{ position:relative; padding:0; overflow:hidden; aspect-ratio:3/4;
+  border:1px solid var(--line-strong); border-radius:var(--radius);
+  background:var(--card); transition:border-color .18s, box-shadow .18s; }
+.base-tile img{ display:block; width:100%; height:100%;
+  object-fit:cover; object-position:top; }
+.base-tile:hover{ border-color:var(--ink); }
+.base-tile[aria-pressed="true"]{ border-color:var(--ink); box-shadow:0 0 0 1px var(--ink); }
+.base-tile.photo{ display:flex; align-items:center; justify-content:center;
+  background:var(--field); text-align:center; padding:5px;
+  font-family:var(--mono); font-size:9px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--muted); line-height:1.3; }
+.base-tile .n{ position:absolute; right:3px; bottom:3px;
+  background:rgba(26,28,26,.78); color:#fff;
+  font-family:var(--mono); font-size:9px; border-radius:100px; padding:1px 5px; }
+
+/* підтвердження покупки образу */
+.fit-confirm{ border:1px solid var(--line-strong); border-radius:var(--radius);
+  background:var(--field); padding:13px; margin-top:9px;
+  display:flex; flex-direction:column; gap:10px; }
+.fit-confirm .q{ font-size:12.5px; color:var(--muted); line-height:1.45; }
+.fit-confirm label{ display:flex; gap:9px; align-items:flex-start;
+  font-size:13px; line-height:1.35; cursor:pointer; }
+.fit-confirm input{ margin-top:3px; accent-color:var(--accent); flex:none; }
+.fit-confirm .sub{ font-family:var(--mono); font-size:10px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted); }
+.mini-btn{ border:1px solid var(--line-strong); background:var(--card);
+  border-radius:100px; padding:7px 13px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink);
+  transition:border-color .18s, opacity .18s; }
+.mini-btn:hover:not(:disabled){ border-color:var(--ink); }
+.mini-btn:disabled{ color:var(--line-strong); border-color:var(--line); cursor:not-allowed; }
+.mini-btn.solid{ background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+.mini-btn.solid:hover:not(:disabled){ opacity:.88; }
+.fit-foot-note{ padding:18px 0 28px; font-size:12.5px; color:var(--muted); line-height:1.55; }
+
+/* кошик / оформлення */
+.drawer-backdrop{ position:fixed; inset:0; z-index:220; background:rgba(26,28,26,.42);
+  opacity:0; pointer-events:none; transition:opacity .25s; }
+.drawer-backdrop.open{ opacity:1; pointer-events:auto; }
+.drawer{ position:fixed; top:0; right:0; bottom:0; z-index:230;
+  width:420px; max-width:100vw; background:var(--card);
+  border-left:1px solid var(--line); display:flex; flex-direction:column;
+  transform:translateX(100%); transition:transform .32s cubic-bezier(.2,.7,.3,1); }
+.drawer.open{ transform:none; }
+.drawer-head{ display:flex; align-items:center; justify-content:space-between;
+  padding:20px 22px; border-bottom:1px solid var(--line); gap:12px; }
+.drawer-head h2{ font-size:17px; font-weight:600; letter-spacing:-.02em; }
+.back-btn{ background:none; border:none; padding:0;
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--muted); }
+.back-btn:hover{ color:var(--ink); }
+.drawer-body{ flex:1; overflow-y:auto; padding:8px 22px; }
+.cart-empty{ padding:56px 0; text-align:center; color:var(--muted); font-size:14px; }
+.cart-row{ display:grid; grid-template-columns:72px 1fr auto; gap:14px;
+  padding:18px 0; border-bottom:1px solid var(--line); align-items:start; }
+.cart-row img{ width:72px; height:88px; object-fit:contain;
+  background:var(--field); border-radius:var(--radius); padding:6px; }
+.cart-info{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+.cart-name{ font-size:14px; font-weight:500; line-height:1.3; }
+.cart-variant{ font-family:var(--mono); font-size:11px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--muted); }
+.cart-line-price{ font-family:var(--mono); font-size:13px; white-space:nowrap; }
+.cart-row .stepper button{ width:30px; height:32px; font-size:14px; }
+.cart-row .stepper .qty{ min-width:34px; height:32px; font-size:12px; }
+.remove-btn{ background:none; border:none; padding:0; margin-top:8px;
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--muted); text-decoration:underline; text-underline-offset:3px; }
+.remove-btn:hover{ color:var(--danger); }
+.drawer-foot{ border-top:1px solid var(--line); padding:20px 22px 24px;
+  display:flex; flex-direction:column; gap:16px; }
+.total-row{ display:flex; justify-content:space-between; align-items:baseline; }
+.total-row .label{ font-family:var(--mono); font-size:11px;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.total-row .amount{ font-family:var(--mono); font-size:19px; }
+
+.form-grid{ display:flex; flex-direction:column; gap:18px; padding:20px 0 8px; }
+.field{ display:flex; flex-direction:column; gap:7px; }
+.field label{ font-family:var(--mono); font-size:10px;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.field input, .field textarea, .field select{
+  border:1px solid var(--line-strong); border-radius:var(--radius);
+  padding:12px 13px; font-size:14px; font-family:inherit; color:inherit;
+  background:var(--card); outline:none; resize:vertical; }
+.field select{ appearance:none; cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),
+                   linear-gradient(135deg,var(--muted) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 20px, calc(100% - 13px) 20px;
+  background-size:5px 5px, 5px 5px; background-repeat:no-repeat; }
+.field input:focus, .field textarea:focus, .field select:focus{ border-color:var(--ink); }
+/* місто й індекс стоять в один рядок — вони читаються як одне ціле */
+.field-row{ display:grid; grid-template-columns:1.6fr 1fr; gap:12px; }
+.field.invalid input, .field.invalid textarea{ border-color:var(--danger); }
+.field .hint{ font-size:12px; color:var(--danger); display:none; }
+.field.invalid .hint{ display:block; }
+.form-error{ background:#FBF3F2; color:var(--danger); border:1px solid #E8CFCC;
+  border-radius:var(--radius); padding:12px 14px; font-size:13px; display:none;
+  margin-top:16px; }
+.form-error.show{ display:block; }
+
+.done{ padding:56px 0 24px; display:flex; flex-direction:column; gap:18px; }
+.done .num{ font-family:var(--mono); font-size:34px; letter-spacing:-.02em; }
+.done h3{ font-size:20px; font-weight:600; letter-spacing:-.02em; }
+.done p{ font-size:14px; color:var(--muted); line-height:1.6; }
+.done .summary{ border-top:1px solid var(--line); padding-top:16px;
+  display:flex; flex-direction:column; gap:8px; }
+.done .summary div{ display:flex; justify-content:space-between;
+  font-family:var(--mono); font-size:12px; }
+
+.toast{ position:fixed; left:50%; bottom:28px; z-index:300;
+  transform:translate(-50%,16px); background:var(--ink); color:#fff;
+  padding:13px 20px; border-radius:100px; font-size:13px; white-space:nowrap;
+  opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
+  max-width:calc(100vw - 32px); overflow:hidden; text-overflow:ellipsis; }
+.toast.show{ opacity:1; transform:translate(-50%,0); }
+
+/* чат */
+.chat-fab{ position:fixed; right:24px; bottom:24px; z-index:100;
+  width:54px; height:54px; border-radius:100px; border:none;
+  background:var(--accent); color:#fff; font-size:19px;
+  box-shadow:0 6px 20px rgba(26,28,26,.22); transition:transform .2s; }
+.chat-fab:hover{ transform:translateY(-2px); }
+.chat-panel{ position:fixed; right:24px; bottom:90px; z-index:100;
+  width:376px; max-width:calc(100vw - 32px);
+  height:558px; max-height:calc(100vh - 130px);
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  box-shadow:0 16px 44px rgba(26,28,26,.16);
+  display:flex; flex-direction:column; overflow:hidden; }
+.chat-panel.hidden{ display:none; }
+.chat-header{ padding:16px 18px; border-bottom:1px solid var(--line);
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:14px; font-weight:600; letter-spacing:-.01em; }
+.chat-close{ background:none; border:none; font-size:20px; color:var(--muted); line-height:1; }
+.chat-close:hover{ color:var(--ink); }
+.chat-scope{ display:flex; gap:6px; padding:12px 14px; border-bottom:1px solid var(--line); }
+.scope-btn{ flex:1; border:1px solid var(--line-strong); background:var(--card);
+  border-radius:100px; padding:7px 0; font-family:var(--mono); font-size:10px;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--muted); transition:all .18s; }
+.scope-btn:hover{ color:var(--ink); }
+.scope-btn.active{ background:var(--ink); border-color:var(--ink); color:#fff; }
+.chat-log{ flex:1; overflow-y:auto; padding:18px;
+  display:flex; flex-direction:column; gap:14px; }
+.msg{ font-size:14px; line-height:1.5; max-width:86%; }
+.msg.user{ align-self:flex-end; background:var(--ink); color:#fff;
+  padding:10px 14px; border-radius:14px 14px 3px 14px; }
+.msg.bot{ align-self:flex-start; background:var(--field); color:var(--ink);
+  padding:10px 14px; border-radius:14px 14px 14px 3px; }
+.msg.error{ align-self:flex-start; background:#FBF3F2; color:var(--danger);
+  padding:10px 14px; border-radius:var(--radius); }
+.rec{ display:flex; gap:12px; align-items:flex-start;
+  border:1px solid var(--line); border-radius:var(--radius); padding:10px;
+  background:none; text-align:left; width:100%; transition:border-color .18s; }
+.rec:hover{ border-color:var(--line-strong); }
+.rec-img{ width:58px; height:58px; flex:0 0 58px; object-fit:contain;
+  background:var(--field); border-radius:var(--radius); }
+.rec-body{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.rec-name{ font-size:13px; font-weight:500; line-height:1.25; }
+.rec-price{ font-family:var(--mono); font-size:12px; }
+.rec-reason{ font-size:12px; color:var(--muted); line-height:1.4; }
+.typing{ display:flex; gap:4px; align-self:flex-start; padding:6px 2px; }
+.typing span{ width:6px; height:6px; border-radius:100px;
+  background:var(--line-strong); animation:blink 1.2s infinite; }
+.typing span:nth-child(2){ animation-delay:.2s; }
+.typing span:nth-child(3){ animation-delay:.4s; }
+@keyframes blink{ 0%,60%,100%{opacity:.3} 30%{opacity:1} }
+.chat-input-row{ display:flex; gap:8px; padding:14px; border-top:1px solid var(--line); }
+.chat-input{ flex:1; border:1px solid var(--line-strong); border-radius:var(--radius);
+  padding:11px 13px; font-size:14px; font-family:inherit; color:inherit;
+  background:var(--card); outline:none; }
+.chat-input:focus{ border-color:var(--ink); }
+.chat-send{ border:none; background:var(--accent); color:#fff;
+  border-radius:var(--radius); padding:0 18px; font-size:13px; font-weight:500; }
+.chat-send:disabled{ background:var(--line); color:var(--muted); cursor:default; }
+
+@media (max-width:520px){
+  .wrap{ padding:0 18px; }
+  .hero{ padding:48px 0 32px; }
+  .grid{ grid-template-columns:repeat(2,1fr); column-gap:14px; row-gap:32px; }
+  .card-media img{ padding:14px; }
+}
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.01ms !important; transition-duration:.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand">FORM<span>Store</span></div>
+    <div class="head-actions">
+      <button class="cart-btn" id="fitBtn" hidden>Try-ons <b id="fitCount">0</b></button>
+      <button class="cart-btn" id="cartBtn">Cart <b id="cartCount">0</b></button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <p class="eyebrow mono" id="heroMeta">Live from the database</p>
+    <h1>Everything in the store, right now.</h1>
+  </section>
+
+  <nav class="filters" id="filters" aria-label="Filter by category">
+    <button class="filter-btn active" data-gender="all">All</button>
+    <button class="filter-btn" data-gender="womens">Women</button>
+    <button class="filter-btn" data-gender="mens">Men</button>
+    <button class="filter-btn" data-gender="unisex">Unisex</button>
+    <span class="count mono" id="resultCount"></span>
+  </nav>
+
+  <div id="status" class="status"></div>
+  <div id="grid" class="grid"></div>
+</main>
+
+<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <button class="icon-close" id="modalClose" aria-label="Close">&times;</button>
+    <div class="modal-inner">
+      <div class="modal-media"><img id="modalImg" src="" alt=""></div>
+      <div class="modal-info">
+        <div>
+          <p class="mono" id="modalGender" style="margin-bottom:10px"></p>
+          <h2 class="modal-title" id="modalTitle"></h2>
+        </div>
+        <p class="modal-price" id="modalPrice"></p>
+        <p class="modal-desc" id="modalDesc"></p>
+
+        <div class="choice" id="colorBlock" hidden>
+          <div class="choice-head"><span class="mono">Colour</span><span class="value" id="colorValue"></span></div>
+          <div class="chips" id="colorChips"></div>
+        </div>
+
+        <div class="choice" id="sizeBlock" hidden>
+          <div class="choice-head"><span class="mono">Size</span><span class="value" id="sizeValue"></span></div>
+          <div class="chips" id="sizeChips"></div>
+        </div>
+
+        <div class="choice">
+          <div class="choice-head">
+            <span class="mono">Quantity</span>
+            <span class="stock-note" id="stockNote"></span>
+          </div>
+          <div class="stepper">
+            <button type="button" id="qtyMinus" aria-label="Decrease quantity">&minus;</button>
+            <span class="qty" id="qtyValue">1</span>
+            <button type="button" id="qtyPlus" aria-label="Increase quantity">+</button>
+          </div>
+        </div>
+
+        <button class="add-btn" id="addBtn" disabled>Add to cart</button>
+        <button class="btn-ghost" id="tryonBtn" type="button" hidden disabled>
+          <span id="tryonBtnLabel">See it on you</span> <span class="tag">Try-on</span>
+        </button>
+        <p class="modal-meta" id="modalMeta"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop tryon-backdrop" id="tryonBackdrop"
+     role="dialog" aria-modal="true" aria-labelledby="tryonTitle">
+  <div class="modal tryon-modal">
+    <button class="icon-close" id="tryonClose" aria-label="Close">&times;</button>
+    <div class="modal-inner">
+
+      <div class="tryon-stage" id="tryonStage">
+        <div class="tryon-empty" id="tryonEmpty">
+          <div class="frame"></div>
+          <p class="mono">Your photo goes here</p>
+        </div>
+        <img id="tryonPhoto" alt="" hidden>
+        <div class="tryon-progress" id="tryonProgress" hidden>
+          <div class="bar"><span id="tryonBar"></span></div>
+          <p class="mono" id="tryonStageText">Sending your photo</p>
+        </div>
+      </div>
+
+      <div class="modal-info">
+        <div>
+          <p class="mono" style="margin-bottom:10px">Virtual try-on</p>
+          <h2 class="modal-title" id="tryonTitle"></h2>
+        </div>
+
+        <div class="tryon-garment">
+          <img id="tryonGarment" alt="" onerror="this.style.opacity=.25">
+          <div class="g-body">
+            <div class="g-name" id="tryonGarmentName"></div>
+            <div class="g-note" id="tryonGarmentNote"></div>
+          </div>
+        </div>
+
+        <input type="file" id="tryonFile" accept="image/*" hidden>
+        <button class="btn-ghost" type="button" id="tryonPick">Choose a photo</button>
+
+        <div class="tryon-bases" id="tryonBases" hidden>
+          <p class="mono">Start from</p>
+          <div class="base-grid" id="baseGrid"></div>
+        </div>
+
+        <p class="tryon-note" id="tryonNote"></p>
+
+        <div class="tryon-error" id="tryonError" hidden></div>
+        <p class="tryon-keep" id="tryonKeep" hidden>
+          Keep this tab open — leaving now loses the result.
+        </p>
+
+        <button class="add-btn" id="tryonRun" disabled>Try it on</button>
+        <button class="add-btn" id="tryonBuy" hidden>Add to cart</button>
+
+        <p class="tryon-privacy">
+          Your photo is sent to our try-on provider to make the image.
+          This store keeps no copy of it.
+        </p>
+        <p class="tryon-usage" id="tryonUsage" hidden></p>
+        <p class="modal-meta" id="tryonMeta"></p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+  <div class="drawer-head">
+    <button class="back-btn" id="backBtn" hidden>&larr; Cart</button>
+    <h2 id="drawerTitle">Cart</h2>
+    <button class="icon-close" id="drawerClose" aria-label="Close" style="position:static">&times;</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+  <div class="drawer-foot" id="drawerFoot">
+    <div class="total-row">
+      <span class="label">Total</span>
+      <span class="amount" id="cartTotal">$0.00</span>
+    </div>
+    <button class="add-btn" id="primaryBtn" disabled>Checkout</button>
+  </div>
+</aside>
+
+<div class="drawer-backdrop" id="fitBackdrop"></div>
+<aside class="drawer" id="fitDrawer" role="dialog" aria-modal="true" aria-labelledby="fitTitle">
+  <div class="drawer-head">
+    <h2 id="fitTitle">Fitting room</h2>
+    <button class="icon-close" id="fitClose" aria-label="Close" style="position:static">&times;</button>
+  </div>
+  <div class="drawer-body" id="fitBody"></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<button id="chatFab" class="chat-fab" aria-label="Open shopping assistant">&#9679;</button>
+
+<div id="chatPanel" class="chat-panel hidden">
+  <div class="chat-header">
+    <span>Shopping assistant</span>
+    <button id="chatClose" class="chat-close" aria-label="Close">&times;</button>
+  </div>
+  <div class="chat-scope" id="chatScope">
+    <button class="scope-btn active" data-gender="all">All</button>
+    <button class="scope-btn" data-gender="womens">Women</button>
+    <button class="scope-btn" data-gender="mens">Men</button>
+  </div>
+  <div id="chatLog" class="chat-log">
+    <div class="msg bot">Tell me the occasion, the weather or the vibe — I'll pull pieces from the catalogue.</div>
+  </div>
+  <div class="chat-input-row">
+    <input id="chatInput" class="chat-input" type="text" placeholder="Something for a cold evening…" autocomplete="off">
+    <button id="chatSend" class="chat-send">Send</button>
+  </div>
+</div>
+
+<script>
+/* === Адреси n8n webhook ===
+   Хост беремо з адреси самої сторінки, а не пишемо жорстко.
+   "localhost" на телефоні означає сам телефон, а не цей ноутбук, —
+   тож відкрита по мережі сторінка шукала б n8n у себе й нічого не знайшла.
+   Тепер: localhost:8080 → localhost:5678, 192.168.2.6:8080 → 192.168.2.6:5678. */
+const N8N = `${location.protocol}//${location.hostname}:5678`;
+
+const WEBHOOK_URL   = `${N8N}/webhook/0e9da369-b0f5-4b5b-bb8a-df6a200a65f2`;
+const ASSISTANT_URL = `${N8N}/webhook/assistant`;
+const ORDER_URL     = `${N8N}/webhook/create-order`;
+const CHECKOUT_URL  = `${N8N}/webhook/dd3386d8-9d3d-4255-9d5d-9e6219e38b38`;
+
+const LOW_STOCK = 1;   // попередження лише на останній одиниці
+
+let allProducts = [];
+const productsById = new Map();
+let activeFilter = "all";
+const cart = [];
+let view = "cart";
+let lastOrder = null;
+
+/* ============================================================ ЗБЕРЕЖЕННЯ КОШИКА
+   У сховищі лежать ТІЛЬКИ variant_id, кількість і зліпок ціни.
+   Назви, картинки й залишки завжди беруться зі свіжого каталогу:
+   кошик тижневої давнини не має права показувати вчорашній склад.
+   Збережена ціна ні на що не впливає — вона лише для порівняння. */
+const CART_KEY    = "form_store_cart_v1";
+const CART_TTL_MS = 7 * 24 * 60 * 60 * 1000;   // тиждень
+
+let cartHydrated = false;   // до першої звірки з каталогом писати в сховище заборонено
+
+function saveCart(){
+  if (!cartHydrated) return;
+  try{
+    localStorage.setItem(CART_KEY, JSON.stringify({
+      saved_at: Date.now(),
+      items: cart.map(i => ({
+        variant_id: i.variant_id,
+        quantity:   i.quantity,
+        price:      i.price_at_purchase
+      }))
+    }));
+  }catch(_){ /* приватний режим чи вимкнене сховище — просто працюємо без пам'яті */ }
+}
+
+function readSavedCart(){
+  try{
+    const raw = localStorage.getItem(CART_KEY);
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.items)) return [];
+    if (Date.now() - Number(data.saved_at || 0) > CART_TTL_MS){
+      localStorage.removeItem(CART_KEY);       // протух — не воскрешаємо
+      return [];
+    }
+    return data.items;
+  }catch(_){ return []; }                      // побитий JSON не має валити сторінку
+}
+
+const pendingCartRows = readSavedCart();       // читаємо ОДРАЗУ, поки ніхто не встиг затерти
+
+function findVariant(variantId){
+  for (const p of allProducts){
+    const v = (p.variants || []).find(x => String(x.id) === String(variantId));
+    if (v) return { product: p, variant: v };
+  }
+  return null;
+}
+
+/* Звірка кошика з каталогом. Викликається після КОЖНОГО завантаження товарів:
+   і при старті сторінки, і після відмови "out_of_stock" — тоді кількості
+   самі підрівняються під свіжі залишки. */
+function syncCart(){
+  const rows = cartHydrated
+    ? cart.map(i => ({ variant_id: i.variant_id, quantity: i.quantity, price: i.price_at_purchase }))
+    : pendingCartRows;
+
+  cart.length = 0;
+  let gone = 0, trimmed = 0, repriced = 0;
+
+  for (const row of rows){
+    const hit = findVariant(row.variant_id);
+    if (!hit){ gone++; continue; }                    // товар зник з каталогу
+
+    const stock = stockOf(hit.variant);
+    const want  = Number(row.quantity) || 0;
+    const qty   = Math.min(want, stock);
+    if (qty <= 0){ gone++; continue; }                // розпродали повністю
+    if (qty < want) trimmed++;                        // лишилось менше, ніж хотіли
+    if (row.price != null && Number(row.price) !== Number(hit.product.price)) repriced++;
+
+    cart.push({
+      variant_id: hit.variant.id, product_id: hit.product.id,
+      name: hit.product.name, image_url: hit.product.image_url,
+      color: hit.variant.color, size: hit.variant.size,
+      price_at_purchase: hit.product.price,           // ціна з бази, не зі сховища
+      stock,                                          // свіжий залишок
+      quantity: qty
+    });
+  }
+
+  cartHydrated = true;
+  render();                                           // render сам викличе saveCart
+
+  const notes = [];
+  if (gone)     notes.push(`${gone} sold out and removed`);
+  if (trimmed)  notes.push(`${trimmed} adjusted to stock`);
+  if (repriced) notes.push(`${repriced} price changed`);
+  if (notes.length) showToast("Cart updated — " + notes.join(", "));
+}
+
+const statusEl = document.getElementById("status");
+const gridEl   = document.getElementById("grid");
+const money = n => "$" + Number(n).toFixed(2);
+
+function setStatus(msg, type){
+  statusEl.textContent = msg;
+  statusEl.className = "status " + (type || "");
+}
+
+const COLOR_HEX = {
+  black:"#141414", white:"#FFFFFF", "off white":"#F2F0EA", cream:"#EFE7D8",
+  beige:"#D8C9B0", tan:"#C2A178", brown:"#6B4A31", "dark brown":"#4A3221",
+  grey:"#8A8D8A", gray:"#8A8D8A", silver:"#C9CBC7", charcoal:"#3A3D3A",
+  navy:"#1F2A44", "navy blue":"#1F2A44", blue:"#2B5FA8", "light blue":"#9CC3E5",
+  "sky blue":"#8FC4E8", teal:"#2C6E6B", green:"#2F6B45", olive:"#5E6B3F",
+  mint:"#B7DDC6", red:"#B3271E", maroon:"#5E1F27", burgundy:"#5B2233",
+  pink:"#E2A0B4", "hot pink":"#D64F86", purple:"#5C4A82", lavender:"#C3B5DD",
+  yellow:"#E0B93B", mustard:"#C99A2E", orange:"#D2712F", gold:"#C9A24A"
+};
+function colorDot(name){
+  const hex = COLOR_HEX[String(name||"").toLowerCase().trim()];
+  const style = hex ? `background:${hex}`
+                    : `background:linear-gradient(135deg,#E8E8E4 50%,#CFCFC9 50%)`;
+  return `<span class="dot" style="${style}"></span>`;
+}
+const SIZE_ORDER = ["XXS","XS","S","M","L","XL","XXL","XXXL"];
+function sortSizes(a,b){
+  const ia = SIZE_ORDER.indexOf(String(a).toUpperCase());
+  const ib = SIZE_ORDER.indexOf(String(b).toUpperCase());
+  if (ia !== -1 && ib !== -1) return ia - ib;
+  const na = parseFloat(a), nb = parseFloat(b);
+  if (!isNaN(na) && !isNaN(nb)) return na - nb;
+  if (ia !== -1) return -1;
+  if (ib !== -1) return 1;
+  return String(a).localeCompare(String(b));
+}
+const uniqueColors = variants => [...new Set((variants||[]).map(v=>v.color).filter(Boolean))];
+const stockOf = v => Number(v?.stock_quantity ?? 0);
+const totalStock = p => (p.variants||[]).reduce((s,v)=>s+stockOf(v), 0);
+
+/* ============================================================ СІТКА */
+function renderProducts(products){
+  gridEl.innerHTML = "";
+  if (!products.length){
+    gridEl.innerHTML = `<p class="mono" style="grid-column:1/-1">Nothing in this category yet.</p>`;
+    return;
+  }
+  products.forEach(p => {
+    const stock = totalStock(p);
+    const card = document.createElement("button");
+    card.className = "card" + (stock === 0 ? " sold-out" : "");
+    card.type = "button"; card.dataset.id = p.id;
+
+    let badge = "";
+    if (stock === 0)             badge = `<span class="badge out">Sold out</span>`;
+    else if (stock <= LOW_STOCK) badge = `<span class="badge low">Last one</span>`;
+
+    card.innerHTML = `
+      <div class="card-media">
+        ${badge}
+        <img src="${p.image_url}" alt="${p.name}" loading="lazy" onerror="this.style.opacity=.25">
+        <div class="card-swatches">${uniqueColors(p.variants).slice(0,4).map(colorDot).join("")}</div>
+      </div>
+      <div class="card-body">
+        <div class="card-name">${p.name}</div>
+        <div class="card-price">${money(p.price)}</div>
+      </div>`;
+    card.addEventListener("click", () => openModal(p.id));
+    gridEl.appendChild(card);
+  });
+}
+
+function applyFilter(){
+  const list = activeFilter === "all"
+    ? allProducts : allProducts.filter(p => p.gender === activeFilter);
+  renderProducts(list);
+  document.getElementById("resultCount").textContent =
+    list.length + (list.length === 1 ? " item" : " items");
+}
+
+document.getElementById("filters").addEventListener("click", e => {
+  const btn = e.target.closest(".filter-btn");
+  if (!btn) return;
+  activeFilter = btn.dataset.gender;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b === btn));
+  applyFilter();
+});
+
+async function loadProducts(){
+  setStatus("Loading the catalogue…", "loading");
+  try{
+    const res = await fetch(WEBHOOK_URL);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    allProducts = Array.isArray(data) ? data : [];
+    productsById.clear();
+    allProducts.forEach(p => productsById.set(String(p.id), p));
+    applyFilter();
+    syncCart();
+    document.getElementById("heroMeta").textContent =
+      `${allProducts.length} pieces · live from the database`;
+    setStatus("", "");
+  }catch(err){
+    setStatus("Couldn't reach the catalogue. Check that n8n is running, then reload the page. (" + err.message + ")", "error");
+  }
+}
+loadProducts();
+
+/* ============================================================ МОДАЛКА */
+const backdrop   = document.getElementById("modalBackdrop");
+const addBtn     = document.getElementById("addBtn");
+const colorBlock = document.getElementById("colorBlock");
+const sizeBlock  = document.getElementById("sizeBlock");
+const colorChips = document.getElementById("colorChips");
+const sizeChips  = document.getElementById("sizeChips");
+
+let current = null, pickedColor = null, pickedSize = null, qty = 1, lastFocused = null;
+
+function openModal(id){
+  const p = productsById.get(String(id));
+  if (!p) return;
+  current = p; pickedColor = null; pickedSize = null; qty = 1;
+  lastFocused = document.activeElement;
+
+  document.getElementById("modalImg").src = p.image_url;
+  document.getElementById("modalImg").alt = p.name;
+  document.getElementById("modalGender").textContent = p.gender || "";
+  document.getElementById("modalTitle").textContent  = p.name;
+  document.getElementById("modalPrice").textContent  = money(p.price);
+  document.getElementById("modalDesc").textContent   = p.rich_description || p.description || "";
+
+  const variants = p.variants || [];
+  const colors = uniqueColors(variants);
+  const sizes  = [...new Set(variants.map(v=>v.size).filter(Boolean))].sort(sortSizes);
+
+  colorBlock.hidden = colors.length === 0;
+  colorChips.innerHTML = colors.map(c => {
+    // колір недоступний, якщо всі його варіанти розпродані
+    const out = variants.filter(v => v.color === c).every(v => stockOf(v) === 0);
+    return `<button class="chip-color" type="button" data-color="${c}"
+             aria-pressed="false" ${out ? "disabled" : ""}>
+             ${colorDot(c)}<span>${c}</span></button>`;
+  }).join("");
+
+  sizeBlock.hidden = sizes.length === 0;
+  sizeChips.innerHTML = sizes.map(s =>
+    `<button class="chip-size" type="button" data-size="${s}" aria-pressed="false">${s}</button>`
+  ).join("");
+
+  // перший колір, який ще є в наявності
+  const firstAvailable = colors.find(c =>
+    variants.some(v => v.color === c && stockOf(v) > 0));
+  if (firstAvailable) pickColor(firstAvailable);
+  else if (colors.length) pickColor(colors[0]);
+
+  refresh();
+  backdrop.classList.add("open");
+  document.body.style.overflow = "hidden";
+  document.getElementById("modalClose").focus();
+}
+
+function closeModal(){
+  backdrop.classList.remove("open");
+  document.body.style.overflow = "";
+  current = null;
+  if (lastFocused) lastFocused.focus();
+}
+
+/* розміри, які реально можна купити для цього кольору */
+function sizesAvailableFor(color){
+  const variants = current?.variants || [];
+  return new Set(
+    variants.filter(v => (!color || v.color === color) && stockOf(v) > 0)
+            .map(v => v.size).filter(Boolean)
+  );
+}
+function pickColor(color){
+  pickedColor = color;
+  if (pickedSize && !sizesAvailableFor(color).has(pickedSize)) pickedSize = null;
+}
+function resolveVariant(){
+  const variants = current?.variants || [];
+  if (!variants.length) return null;
+  return variants.find(v =>
+    (pickedColor === null || v.color === pickedColor) &&
+    ((pickedSize === null && v.size === null) || v.size === pickedSize)) || null;
+}
+
+/* скільки ще можна додати: залишок мінус те, що вже в кошику */
+function maxAddable(variant){
+  if (!variant) return 0;
+  const inCart = cart.find(i => i.variant_id === variant.id)?.quantity || 0;
+  return Math.max(0, stockOf(variant) - inCart);
+}
+
+function refresh(){
+  const variants = current?.variants || [];
+  const needsColor = uniqueColors(variants).length > 0;
+  const needsSize  = variants.some(v => v.size !== null);
+
+  colorChips.querySelectorAll(".chip-color").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.color === pickedColor)));
+  document.getElementById("colorValue").textContent = pickedColor || "";
+
+  const available = sizesAvailableFor(pickedColor);
+  sizeChips.querySelectorAll(".chip-size").forEach(b => {
+    b.disabled = (!needsColor || !pickedColor) ? false : !available.has(b.dataset.size);
+    b.setAttribute("aria-pressed", String(b.dataset.size === pickedSize));
+  });
+  document.getElementById("sizeValue").textContent = pickedSize || "";
+
+  const variant = resolveVariant();
+  const max = maxAddable(variant);
+  if (qty > max) qty = Math.max(1, max);
+
+  const note  = document.getElementById("stockNote");
+  const stock = stockOf(variant);
+
+  if (!variant){
+    // варіант ще не визначений — пояснюємо, чого бракує, замість мовчазного блокування
+    qty = 1;
+    document.getElementById("qtyValue").textContent = 1;
+    document.getElementById("qtyMinus").disabled = true;
+    document.getElementById("qtyPlus").disabled  = true;
+    note.textContent = needsSize && !pickedSize ? "Pick a size first" : "";
+    note.className = "stock-note";
+  } else {
+    document.getElementById("qtyValue").textContent = qty;
+    document.getElementById("qtyMinus").disabled = qty <= 1;
+    document.getElementById("qtyPlus").disabled  = qty >= max;
+    // точний залишок не показуємо — лише коли його мало
+    if (stock === 0){ note.textContent = "Sold out"; note.className = "stock-note low"; }
+    else if (stock <= LOW_STOCK){ note.textContent = "Last one"; note.className = "stock-note low"; }
+    else { note.textContent = ""; note.className = "stock-note"; }
+  }
+
+  if (!variants.length){ addBtn.disabled = true; addBtn.textContent = "Unavailable"; }
+  else if (needsColor && !pickedColor){ addBtn.disabled = true; addBtn.textContent = "Select a colour"; }
+  else if (needsSize && !pickedSize){ addBtn.disabled = true; addBtn.textContent = "Select a size"; }
+  else if (!variant || stock === 0){ addBtn.disabled = true; addBtn.textContent = "Sold out"; }
+  else if (max === 0){ addBtn.disabled = true; addBtn.textContent = "All of it is already in your cart"; }
+  else { addBtn.disabled = false; addBtn.textContent = "Add to cart · " + money(current.price * qty); }
+
+  /* Кнопка примірки. Право дає база (vton_enabled), а доступність — наявність:
+     розмір ми питаємо ЗАРАДИ кошика, тож на розпроданому товарі питати нема навіщо —
+     купити його все одно не можна, а подивитись на собі клієнт має право. */
+  const tryonBtnEl = document.getElementById("tryonBtn");
+  const canTry = Boolean(current?.vton_enabled && current?.tryon_image_url);
+  tryonBtnEl.hidden = !canTry;
+
+  if (canTry){
+    const soldOut = totalStock(current) === 0;
+    const label = document.getElementById("tryonBtnLabel");
+    if (soldOut){
+      tryonBtnEl.disabled = false;  label.textContent = "See it on you";
+    } else if (needsColor && !pickedColor){
+      tryonBtnEl.disabled = true;   label.textContent = "Select a colour";
+    } else if (needsSize && !pickedSize){
+      tryonBtnEl.disabled = true;   label.textContent = "Select a size";
+    } else if (!variant){
+      tryonBtnEl.disabled = true;   label.textContent = "Select a size";
+    } else {
+      tryonBtnEl.disabled = false;  label.textContent = "See it on you";
+    }
+  }
+
+  document.getElementById("modalMeta").textContent =
+    variant ? `Variant #${variant.id}` : `${variants.length} variants`;
+}
+
+colorChips.addEventListener("click", e => {
+  const b = e.target.closest(".chip-color"); if (!b || b.disabled) return;
+  pickColor(b.dataset.color); refresh();
+});
+sizeChips.addEventListener("click", e => {
+  const b = e.target.closest(".chip-size"); if (!b || b.disabled) return;
+  pickedSize = b.dataset.size; refresh();
+});
+document.getElementById("qtyPlus").addEventListener("click", () => {
+  if (qty < maxAddable(resolveVariant())) qty++;
+  refresh();
+});
+document.getElementById("qtyMinus").addEventListener("click", () => { if (qty>1) qty--; refresh(); });
+document.getElementById("modalClose").addEventListener("click", closeModal);
+backdrop.addEventListener("click", e => { if (e.target === backdrop) closeModal(); });
+
+/* ============================================================ КОШИК */
+const drawer         = document.getElementById("drawer");
+const drawerBackdrop = document.getElementById("drawerBackdrop");
+const drawerBody     = document.getElementById("drawerBody");
+const drawerFoot     = document.getElementById("drawerFoot");
+const primaryBtn     = document.getElementById("primaryBtn");
+const backBtn        = document.getElementById("backBtn");
+
+addBtn.addEventListener("click", () => {
+  const variant = resolveVariant();
+  if (!variant || !current) return;
+
+  const existing = cart.find(i => i.variant_id === variant.id);
+  if (existing) existing.quantity = Math.min(existing.quantity + qty, stockOf(variant));
+  else cart.push({
+    variant_id: variant.id, product_id: current.id,
+    name: current.name, image_url: current.image_url,
+    color: variant.color, size: variant.size,
+    price_at_purchase: current.price,
+    stock: stockOf(variant),      // знімок залишку на момент додавання
+    quantity: qty
+  });
+
+  const label = [variant.color, variant.size].filter(Boolean).join(" / ");
+  view = "cart";
+  render();
+  showToast(`Added — ${current.name}${label ? ", " + label : ""} × ${qty}`);
+  closeModal();
+});
+
+function changeQty(id, delta){
+  const item = cart.find(i => i.variant_id === id);
+  if (!item) return;
+  const next = item.quantity + delta;
+  if (next <= 0) return removeItem(id);
+  if (next > item.stock){
+    showToast(`Only ${item.stock} left in that size.`);
+    return;
+  }
+  item.quantity = next;
+  render();
+}
+function removeItem(id){
+  const i = cart.findIndex(x => x.variant_id === id);
+  if (i > -1) cart.splice(i, 1);
+  render();
+}
+const cartTotal = () => cart.reduce((s,i) => s + i.price_at_purchase * i.quantity, 0);
+
+function render(){
+  saveCart();
+  const count = cart.reduce((s,i)=>s+i.quantity, 0);
+  document.getElementById("cartCount").textContent = count;
+  document.getElementById("cartBtn").classList.toggle("filled", count > 0);
+
+  backBtn.hidden = view !== "checkout";
+  document.getElementById("drawerTitle").textContent =
+    view === "checkout" ? "Delivery details"
+    : view === "done"   ? (lastOrder?.title ?? "Order placed")
+    : "Cart";
+
+  if (view === "cart")     return renderCart(count);
+  if (view === "checkout") return renderCheckout();
+  if (view === "done")     return renderDone();
+}
+
+function renderCart(count){
+  drawerFoot.hidden = false;
+  drawerFoot.querySelector(".total-row").hidden = false;
+  document.getElementById("cartTotal").textContent = money(cartTotal());
+  primaryBtn.disabled = count === 0;
+  primaryBtn.textContent = "Checkout";
+
+  if (!cart.length){
+    drawerBody.innerHTML = `<p class="cart-empty">Your cart is empty.<br>Pick something from the catalogue.</p>`;
+    return;
+  }
+  drawerBody.innerHTML = cart.map(i => {
+    const label = [i.color, i.size].filter(Boolean).join(" / ");
+    return `
+      <div class="cart-row">
+        <img src="${i.image_url}" alt="${i.name}" onerror="this.style.opacity=.25">
+        <div class="cart-info">
+          <div class="cart-name">${i.name}</div>
+          <div class="cart-variant">${label || "One size"}</div>
+          <div class="stepper">
+            <button type="button" data-act="minus" data-id="${i.variant_id}" aria-label="Decrease">&minus;</button>
+            <span class="qty">${i.quantity}</span>
+            <button type="button" data-act="plus" data-id="${i.variant_id}"
+                    aria-label="Increase" ${i.quantity >= i.stock ? "disabled" : ""}>+</button>
+          </div>
+          <button class="remove-btn" data-act="remove" data-id="${i.variant_id}">Remove</button>
+        </div>
+        <div class="cart-line-price">${money(i.price_at_purchase * i.quantity)}</div>
+      </div>`;
+  }).join("");
+}
+
+function renderCheckout(){
+  drawerFoot.hidden = false;
+  drawerFoot.querySelector(".total-row").hidden = false;
+  document.getElementById("cartTotal").textContent = money(cartTotal());
+  primaryBtn.disabled = false;
+  primaryBtn.textContent = "Place order · " + money(cartTotal());
+
+  drawerBody.innerHTML = `
+    <div class="form-grid">
+      <div class="field" id="fName">
+        <label for="inName">Full name</label>
+        <input id="inName" type="text" autocomplete="name" placeholder="Ihor Kovalenko">
+        <span class="hint">Enter the name for the delivery.</span>
+      </div>
+      <div class="field" id="fEmail">
+        <label for="inEmail">Email</label>
+        <input id="inEmail" type="email" autocomplete="email" placeholder="you@example.com">
+        <span class="hint">Enter a valid email — the confirmation goes there.</span>
+      </div>
+      <div class="field" id="fPhone">
+        <label for="inPhone">Phone</label>
+        <input id="inPhone" type="tel" autocomplete="tel" placeholder="+30 691 234 5678">
+        <span class="hint">Include the country code, e.g. +30 for Greece.</span>
+      </div>
+
+      <div class="field" id="fLine1">
+        <label for="inLine1">Street and number</label>
+        <input id="inLine1" type="text" autocomplete="address-line1" placeholder="Ermou 12">
+        <span class="hint">Enter the street and building number.</span>
+      </div>
+      <div class="field" id="fLine2">
+        <label for="inLine2">Flat, floor, entrance <span style="text-transform:none">(optional)</span></label>
+        <input id="inLine2" type="text" autocomplete="address-line2" placeholder="Apt 4, 2nd floor">
+      </div>
+
+      <div class="field-row">
+        <div class="field" id="fCity">
+          <label for="inCity">City</label>
+          <input id="inCity" type="text" autocomplete="address-level2" placeholder="Athens">
+          <span class="hint">Required.</span>
+        </div>
+        <div class="field" id="fPostcode">
+          <label for="inPostcode">Postcode</label>
+          <input id="inPostcode" type="text" autocomplete="postal-code" placeholder="10563">
+          <span class="hint">Required.</span>
+        </div>
+      </div>
+
+      <div class="field" id="fCountry">
+        <label for="inCountry">Country</label>
+        <select id="inCountry" autocomplete="country">
+          ${Object.entries(COUNTRY_RULES).map(([code, r]) =>
+            `<option value="${code}"${code === "GR" ? " selected" : ""}>${r.name}</option>`).join("")}
+        </select>
+      </div>
+    </div>
+    <div class="form-error" id="formError"></div>`;
+
+  // зміна країни міняє підказки й скидає підсвітку залежних полів
+  document.getElementById("inCountry").addEventListener("change", () => {
+    applyCountryHints();
+    document.getElementById("fPhone").classList.remove("invalid");
+    document.getElementById("fPostcode").classList.remove("invalid");
+  });
+  applyCountryHints();
+  document.getElementById("inName").focus();
+}
+
+function renderDone(){
+  drawerFoot.hidden = true;
+
+  // після повернення зі Stripe сторінка перезавантажена — сум і кількостей у памʼяті вже немає
+  const rows = [];
+  if (lastOrder.itemCount != null) rows.push(`<div><span>Items</span><span>${lastOrder.itemCount}</span></div>`);
+  if (lastOrder.total     != null) rows.push(`<div><span>Total</span><span>${money(lastOrder.total)}</span></div>`);
+  rows.push(`<div><span>Status</span><span>${lastOrder.status}</span></div>`);
+
+  drawerBody.innerHTML = `
+    <div class="done">
+      <div>
+        <p class="mono" style="margin-bottom:8px">Order number</p>
+        <div class="num">#${lastOrder.order_id}</div>
+      </div>
+      <h3>${lastOrder.heading}</h3>
+      <p>${lastOrder.note}</p>
+      <div class="summary">${rows.join("")}</div>
+    </div>`;
+}
+
+drawerBody.addEventListener("click", e => {
+  const btn = e.target.closest("[data-act]");
+  if (!btn || btn.disabled) return;
+  const id = Number(btn.dataset.id);
+  if (btn.dataset.act === "plus")   changeQty(id, +1);
+  if (btn.dataset.act === "minus")  changeQty(id, -1);
+  if (btn.dataset.act === "remove") removeItem(id);
+});
+
+/* ============================================================ ОФОРМЛЕННЯ */
+primaryBtn.addEventListener("click", () => {
+  if (view === "cart"){ view = "checkout"; render(); return; }
+  if (view === "checkout") submitOrder();
+});
+backBtn.addEventListener("click", () => { view = "cart"; render(); });
+
+/* Правила під країну. Дзеркалять обмеження в базі — фронт дає миттєвий
+   відгук, база гарантує. Міняєш тут — міняй і в CHECK-обмеженнях. */
+const COUNTRY_RULES = {
+  GR: { name:"Greece",  phone:/^\+30[26][0-9]{9}$/,   postcode:/^[0-9]{5}$/,
+        phoneEg:"+30 691 234 5678", postEg:"10563" },
+  UA: { name:"Ukraine", phone:/^\+380[0-9]{9}$/,      postcode:/^[0-9]{5}$/,
+        phoneEg:"+380 67 123 4567", postEg:"01001" },
+  CY: { name:"Cyprus",  phone:/^\+357[0-9]{8}$/,      postcode:/^[0-9]{4}$/,
+        phoneEg:"+357 96 123456",   postEg:"1010" },
+  DE: { name:"Germany", phone:/^\+49[0-9]{6,11}$/,    postcode:/^[0-9]{5}$/,
+        phoneEg:"+49 151 23456789", postEg:"10115" },
+  PL: { name:"Poland",  phone:/^\+48[0-9]{9}$/,       postcode:/^[0-9]{2}-?[0-9]{3}$/,
+        phoneEg:"+48 601 234 567",  postEg:"00-001" }
+};
+
+/* Підказки й приклади підлаштовуються під обрану країну */
+function applyCountryHints(){
+  const code = document.getElementById("inCountry")?.value;
+  const rule = COUNTRY_RULES[code];
+  if (!rule) return;
+  const phone = document.getElementById("inPhone");
+  const post  = document.getElementById("inPostcode");
+  if (phone) phone.placeholder = rule.phoneEg;
+  if (post)  post.placeholder  = rule.postEg;
+  const phoneHint = document.querySelector("#fPhone .hint");
+  const postHint  = document.querySelector("#fPostcode .hint");
+  if (phoneHint) phoneHint.textContent = `Use the ${rule.name} format, e.g. ${rule.phoneEg}.`;
+  if (postHint)  postHint.textContent  = `${rule.name} postcodes look like ${rule.postEg}.`;
+}
+
+/* Валідація по полях: кожне поле підсвічується окремо, щоб клієнт
+   бачив саме те, що треба виправити, а не «щось не так у формі». */
+function validate(){
+  const val = id => document.getElementById(id).value.trim();
+
+  const name  = val("inName");
+  const email = val("inEmail");
+  // прибираємо пробіли, дужки й дефіси — база чекає чистий E.164
+  const phone = val("inPhone").replace(/[\s()\-]/g, "");
+  const line1 = val("inLine1");
+  const line2 = val("inLine2");
+  const city  = val("inCity");
+  const post  = val("inPostcode");
+  const country = document.getElementById("inCountry").value;
+  const rule = COUNTRY_RULES[country];
+
+  const checks = [
+    ["fName",     name.length >= 2],
+    ["fEmail",    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)],
+    ["fPhone",    rule ? rule.phone.test(phone) : /^\+[1-9][0-9]{7,14}$/.test(phone)],
+    ["fLine1",    line1.length >= 3],
+    ["fCity",     city.length >= 2],
+    ["fPostcode", rule ? rule.postcode.test(post) : post.length >= 3]
+  ];
+
+  let ok = true;
+  checks.forEach(([id, valid]) => {
+    document.getElementById(id).classList.toggle("invalid", !valid);
+    if (!valid) ok = false;
+  });
+
+  return ok ? {
+    name, email, phone,
+    address_line1: line1,
+    address_line2: line2,
+    city, postcode: post, country
+  } : null;
+}
+
+async function submitOrder(){
+  const customer = validate();
+  if (!customer) return;
+
+  const errEl = document.getElementById("formError");
+  errEl.classList.remove("show");
+  primaryBtn.disabled = true;
+  primaryBtn.textContent = "Placing the order…";
+
+  // на бекенд ідуть лише варіанти й кількості
+  const items = cart.map(i => ({ variant_id: i.variant_id, quantity: i.quantity }));
+
+  const fail = msg => {
+    errEl.textContent = msg;
+    errEl.classList.add("show");
+    primaryBtn.disabled = false;
+    primaryBtn.textContent = "Place order · " + money(cartTotal());
+  };
+
+  try{
+    const res = await fetch(ORDER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customer, items })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+
+    // бекенд відмовив осмислено — кошик не чіпаємо, даємо виправити
+    if (data.ok === false){
+      if (data.reason === "out_of_stock" || data.reason === "unknown_variant"){
+        await loadProducts();          // підтягуємо свіжі залишки
+      }
+      // машиночитаний reason дозволяє підсвітити саме те поле, що винне
+      const fieldByReason = {
+        invalid_phone:    ["fPhone", "inPhone"],
+        invalid_postcode: ["fPostcode", "inPostcode"],
+        invalid_country:  ["fCountry", "inCountry"]
+      };
+      const target = fieldByReason[data.reason];
+      if (target){
+        document.getElementById(target[0])?.classList.add("invalid");
+        document.getElementById(target[1])?.focus();
+      }
+      return fail(data.message || "The order was rejected.");
+    }
+    if (!data.order_id) throw new Error("No order id in the response");
+
+    // замовлення створено — тепер платіжна сесія
+    primaryBtn.textContent = "Redirecting to payment…";
+
+    let session;
+    try{
+      const pay = await fetch(CHECKOUT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: data.order_id })
+      });
+      if (!pay.ok) throw new Error("HTTP " + pay.status);
+      session = await pay.json();
+      if (!session.checkout_url) throw new Error("no checkout url");
+    }catch(err){
+      // замовлення вже існує і склад списаний — повторне натискання створило б дубль
+      errEl.textContent = `Order #${data.order_id} was created, but the payment page didn't open (${err.message}). Nothing has been charged.`;
+      errEl.classList.add("show");
+      primaryBtn.textContent = "Order placed — payment pending";
+      return;                          // кнопка лишається заблокованою навмисне
+    }
+
+    cart.length = 0;
+    saveCart();
+    window.location.href = session.checkout_url;
+  }catch(err){
+    fail("The order didn't go through. Check that n8n is running, then try again. (" + err.message + ")");
+  }
+}
+
+function openDrawer(){
+  if (view === "done") view = "cart";
+  render();
+  drawer.classList.add("open");
+  drawerBackdrop.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeDrawer(){
+  drawer.classList.remove("open");
+  drawerBackdrop.classList.remove("open");
+  document.body.style.overflow = "";
+}
+document.getElementById("cartBtn").addEventListener("click", openDrawer);
+document.getElementById("drawerClose").addEventListener("click", closeDrawer);
+drawerBackdrop.addEventListener("click", closeDrawer);
+
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (fitDrawer.classList.contains("open")) closeFittingRoom();
+  else if (drawer.classList.contains("open")) closeDrawer();
+  else if (backdrop.classList.contains("open")) closeModal();
+});
+
+let toastTimer;
+function showToast(text){
+  const el = document.getElementById("toast");
+  el.textContent = text;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+render();
+
+/* ============================================================ ВІРТУАЛЬНА ПРИМІРКА (М6)
+
+   Робота асинхронна: запуск повертає квиток (job_id), результат забираємо
+   опитуванням. Тримати з'єднання всі 25-90 секунд не можна — будь-який
+   таймаут проксі вбив би результат, за який кредити вже списані.
+
+   Фото з телефона важить 3-6 МБ, у base64 роздувається ще на третину.
+   FASHN усе одно рендерить у 1k, тож стискаємо в браузері ДО відправки.  */
+
+const TRYON_START_URL  = `${N8N}/webhook/tryon-start`;
+const TRYON_STATUS_URL = `${N8N}/webhook/tryon-status`;
+
+const TRYON_MAX_SIDE = 1152;
+const TRYON_MAX_FILE = 12 * 1024 * 1024;   // сирий файл більше 12 МБ навіть не читаємо
+const POLL_FIRST_MS  = 4000;               // перше питання — коли робота вже в черзі
+const POLL_EVERY_MS  = 3000;
+const POLL_CEILING_MS = 90000;             // далі не чекаємо, але job_id не викидаємо
+const POLL_ERR_TOLERANCE = 3;              // мережеве моргання не має вбивати опитування
+
+const tryonBackdrop = document.getElementById("tryonBackdrop");
+const tryonPhotoEl  = document.getElementById("tryonPhoto");
+const tryonEmptyEl  = document.getElementById("tryonEmpty");
+const tryonStageEl  = document.getElementById("tryonStage");
+const tryonFileEl   = document.getElementById("tryonFile");
+const tryonPickEl   = document.getElementById("tryonPick");
+const tryonBasesEl  = document.getElementById("tryonBases");
+const baseGridEl    = document.getElementById("baseGrid");
+const tryonRunEl    = document.getElementById("tryonRun");
+const tryonBuyEl    = document.getElementById("tryonBuy");
+const tryonErrEl    = document.getElementById("tryonError");
+const tryonMetaEl   = document.getElementById("tryonMeta");
+const tryonKeepEl   = document.getElementById("tryonKeep");
+const tryonUsageEl  = document.getElementById("tryonUsage");
+const tryonProgEl   = document.getElementById("tryonProgress");
+const tryonBarEl    = document.getElementById("tryonBar");
+const tryonStageTxt = document.getElementById("tryonStageText");
+
+let tryonProduct = null;    // товар, який міряємо
+let tryonVariant = null;    // обраний варіант (null, якщо товар розпроданий)
+let modelImage   = null;    // { src, meta, baseItems } — на чому міряємо
+let tryonBusy    = false;   // головний запобіжник від подвійного списання
+let lastJobId    = null;    // живе після тайм-ауту, щоб можна було дозабрати результат
+let startFails   = 0;       // два збої підряд = сервіс лежить, годі клацати
+let timerId      = null;
+
+/* Примірочна: кожен запис — це ОБРАЗ, а не одна річ.
+   Приміряти можна поверх попереднього результату, тож у знімку
+   може бути кілька речей — усі вони їдуть у списку items.
+   Зберігаємо варіанти, а не товари: кошик оперує variant_id.
+
+   FASHN тримає знімки 72 години (заголовок x-amz-expiration каже прямо:
+   "Delete images after 72 hours"), тож посилання можна класти у сховище —
+   людина повернеться ввечері або завтра й побачить свою примірочну.
+   Але на арифметику з датами не покладаємось: битий знімок ловимо
+   по onerror і прибираємо тихо. Дата потрібна лише щоб не смикати
+   мережу заради завідомо мертвого. */
+const TRYON_KEY     = "form_store_tryons_v1";
+const TRYON_TTL_MS  = 72 * 60 * 60 * 1000;
+
+let tryonResults = [];
+
+function saveTryons(){
+  try{
+    localStorage.setItem(TRYON_KEY, JSON.stringify(tryonResults));
+  }catch(_){ /* приватний режим або сховище переповнене — працюємо без памʼяті */ }
+}
+
+function readTryons(){
+  try{
+    const raw = localStorage.getItem(TRYON_KEY);
+    if (!raw) return [];
+    const rows = JSON.parse(raw);
+    if (!Array.isArray(rows)) return [];
+    const alive = rows.filter(r =>
+      r && typeof r.image === "string" && Array.isArray(r.items) && r.items.length &&
+      Date.now() - Number(r.made_at || 0) < TRYON_TTL_MS);
+    return alive.slice(-10);
+  }catch(_){ return []; }
+}
+
+tryonResults = readTryons();
+
+/* Підказка про кадр залежить від того, куди вдягається річ:
+   під штани фото по пояс марне, під сумку — цілком достатнє. */
+const FRAME_HINT = {
+  "mens-shoes":     "Your feet need to be in frame — a full-body shot works best.",
+  "womens-shoes":   "Your feet need to be in frame — a full-body shot works best.",
+  "womens-dresses": "A full-body shot works best, facing the camera.",
+  "mens-shirts":    "Waist-up or full-body, facing the camera.",
+  "tops":           "Waist-up or full-body, facing the camera.",
+  "womens-bags":    "Waist-up or full-body, facing the camera."
+};
+const FRAME_HINT_DEFAULT = "Show the part of your body the item goes on, facing the camera.";
+
+function tryonFail(msg){
+  tryonErrEl.textContent = msg;
+  tryonErrEl.hidden = false;
+}
+function tryonClearError(){ tryonErrEl.hidden = true; }
+
+/* Стиснення через canvas. Повертає dataURL, готовий до відправки як model_image. */
+function downscaleImage(file, maxSide){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("read"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("decode"));
+      img.onload = () => {
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const w = Math.round(img.width  * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+        // довжина base64 → приблизний розмір у байтах
+        const bytes = Math.round((dataUrl.length - dataUrl.indexOf(",") - 1) * 0.75);
+        resolve({ dataUrl, w, h, bytes });
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+const kb = n => (n / 1024 < 1024)
+  ? Math.round(n / 1024) + " KB"
+  : (n / 1024 / 1024).toFixed(1) + " MB";
+
+function openTryOn(){
+  const p = current;
+  if (!p || !p.vton_enabled || !p.tryon_image_url) return;
+  if (tryonBusy) return;
+
+  tryonProduct = p;
+  tryonVariant = resolveVariant();          // на розпроданому товарі буде null — це нормально
+  modelImage = null;
+  lastJobId = null;
+
+  document.getElementById("tryonTitle").textContent       = p.name;
+  document.getElementById("tryonGarment").src             = p.image_url;
+  document.getElementById("tryonGarmentName").textContent = p.name;
+
+  const soldOut = totalStock(p) === 0;
+  const picked  = [tryonVariant?.color, tryonVariant?.size].filter(Boolean).join(" / ");
+  document.getElementById("tryonGarmentNote").textContent =
+    soldOut ? "Sold out — try-on only"
+            : (picked || "One size");
+
+  document.getElementById("tryonNote").textContent =
+    FRAME_HINT[p.category] || FRAME_HINT_DEFAULT;
+
+  tryonPhotoEl.hidden = true;
+  tryonPhotoEl.removeAttribute("src");
+  tryonEmptyEl.hidden = false;
+  tryonStageEl.classList.remove("working");
+  tryonProgEl.hidden = true;
+  tryonKeepEl.hidden = true;
+  tryonPickEl.textContent = "Choose a photo";
+  tryonPickEl.disabled = false;
+
+  /* Основою може бути своє фото або БУДЬ-ЯКИЙ збережений образ, не лише останній:
+     людина міряє кілька варіантів саме щоб порівняти, і збирати образ
+     захоче з того, що сподобалось. Результат FASHN — посилання, і воно ж
+     приймається як model_image, тож шарування не коштує зайвого трафіку. */
+  baseSel = "photo";
+  uploadedShot = null;
+  renderBases();
+
+  tryonRunEl.hidden = false;
+  tryonRunEl.disabled = true;
+  tryonRunEl.textContent = "Try it on";
+  tryonBuyEl.hidden = true;
+  tryonMetaEl.textContent = "";
+  tryonClearError();
+
+  if (startFails >= 2) blockTryOn("Try-on is unavailable right now. Reload the page to try again.");
+
+  tryonBackdrop.classList.add("open");
+  document.body.style.overflow = "hidden";
+  tryonPickEl.focus();
+}
+
+function blockTryOn(msg){
+  tryonRunEl.disabled = true;
+  tryonPickEl.disabled = true;
+  tryonFail(msg);
+}
+
+function closeTryOn(){
+  if (tryonBusy) return;                    // під час роботи закриття лише через хрестик браузера
+  tryonBackdrop.classList.remove("open");
+  // під нею лишається відкрита картка товару — прокрутку не повертаємо
+  if (!backdrop.classList.contains("open")) document.body.style.overflow = "";
+  tryonProduct = null;
+}
+
+document.getElementById("tryonBtn").addEventListener("click", openTryOn);
+document.getElementById("tryonClose").addEventListener("click", closeTryOn);
+tryonBackdrop.addEventListener("click", e => { if (e.target === tryonBackdrop) closeTryOn(); });
+
+document.getElementById("tryonPick").addEventListener("click", () => tryonFileEl.click());
+
+tryonFileEl.addEventListener("change", async () => {
+  const file = tryonFileEl.files?.[0];
+  tryonFileEl.value = "";                 // щоб те саме фото можна було вибрати вдруге
+  if (!file) return;
+
+  tryonClearError();
+
+  if (file.size > TRYON_MAX_FILE){
+    return tryonFail(`That photo is ${kb(file.size)}. Pick one under 12 MB.`);
+  }
+
+  tryonMetaEl.textContent = "Preparing the photo…";
+  try{
+    const shot = await downscaleImage(file, TRYON_MAX_SIDE);
+    modelImage = { src: shot.dataUrl, baseItems: [], baseReplaced: [] };
+    uploadedShot = shot.dataUrl;
+    baseSel = "photo";
+
+    tryonPhotoEl.src = shot.dataUrl;
+    tryonPhotoEl.hidden = false;
+    tryonEmptyEl.hidden = true;
+    tryonRunEl.hidden = false;
+    tryonRunEl.disabled = false;
+    tryonRunEl.textContent = "Try it on";
+    tryonPickEl.textContent = "Change photo";
+    tryonMetaEl.textContent = `${shot.w}×${shot.h} · ${kb(shot.bytes)} · ready to send`;
+    renderBases();
+  }catch(err){
+    modelImage = null;
+    tryonMetaEl.textContent = "";
+    tryonFail(err.message === "decode"
+      ? "The browser can't read that image. HEIC photos from iPhone need converting to JPEG first."
+      : "Couldn't read that file. Try another photo.");
+  }
+});
+
+/* ---------- вибір основи ---------- */
+
+let baseSel = "photo";      // "photo" або індекс образу в tryonResults
+let uploadedShot = null;    // останнє завантажене фото, щоб плитка його показувала
+
+const BASE_TILES_MAX = 9;   // плюс плитка «своє фото» = дві стрічки по п'ять
+
+function renderBases(){
+  const looks = tryonResults.map((r, i) => ({ r, i })).reverse().slice(0, BASE_TILES_MAX);
+  tryonBasesEl.hidden = looks.length === 0;
+  tryonPickEl.hidden  = looks.length > 0;   // плитка фото бере цю роль на себе
+  if (!looks.length) return;
+
+  const photoTile = uploadedShot
+    ? `<button class="base-tile" type="button" data-base="photo"
+               aria-pressed="${baseSel === "photo"}">
+         <img src="${uploadedShot}" alt="Your photo">
+       </button>`
+    : `<button class="base-tile photo" type="button" data-base="photo"
+               aria-pressed="${baseSel === "photo"}">Your photo</button>`;
+
+  baseGridEl.innerHTML = photoTile + looks.map(({ r, i }) => `
+    <button class="base-tile" type="button" data-base="${i}"
+            aria-pressed="${baseSel === i}" title="${r.items.map(x => x.name).join(", ")}">
+      <img src="${r.image}" alt="Look with ${r.items.map(x => x.name).join(", ")}">
+      ${r.items.length > 1 ? `<span class="n">${r.items.length}</span>` : ``}
+    </button>`).join("");
+}
+
+function pickBaseLook(idx){
+  const look = tryonResults[idx];
+  if (!look) return;
+
+  baseSel = idx;
+  modelImage = {
+    src: look.image,
+    baseItems: look.items.slice(),
+    baseReplaced: (look.replaced || []).slice()
+  };
+
+  tryonPhotoEl.src = look.image;
+  tryonPhotoEl.hidden = false;
+  tryonEmptyEl.hidden = true;
+  tryonRunEl.hidden = false;
+  tryonRunEl.disabled = false;
+  tryonRunEl.textContent = "Try it on";
+  tryonClearError();
+  tryonMetaEl.textContent = `Layering over: ${look.items.map(x => x.name).join(", ")}`;
+  renderBases();
+}
+
+baseGridEl.addEventListener("click", e => {
+  const tile = e.target.closest("[data-base]");
+  if (!tile || tryonBusy) return;
+  if (tile.dataset.base === "photo"){
+    if (uploadedShot && baseSel !== "photo"){
+      // фото вже завантажене — просто повертаємось до нього
+      baseSel = "photo";
+      modelImage = { src: uploadedShot, baseItems: [], baseReplaced: [] };
+      tryonPhotoEl.src = uploadedShot;
+      tryonPhotoEl.hidden = false;
+      tryonEmptyEl.hidden = true;
+      tryonRunEl.disabled = false;
+      tryonMetaEl.textContent = "";
+      renderBases();
+    } else {
+      tryonFileEl.click();
+    }
+    return;
+  }
+  pickBaseLook(Number(tile.dataset.base));
+});
+
+/* ---------- запуск і опитування ---------- */
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* FASHN може віддати посилання, готовий data:URL або «голий» base64 —
+   приводимо до того, що вміє показати <img>. Короткий рядок без схеми
+   картинкою бути не може: це майже завжди "undefined" з виразу n8n. */
+function asImageSrc(v){
+  if (typeof v !== "string") return null;
+  const s = v.trim();
+  if (!s) return null;
+  if (s.startsWith("data:") || s.startsWith("http")) return s;
+  if (s.length < 500) return null;
+  return "data:image/png;base64," + s;
+}
+
+/* Попередження браузера при закритті вкладки — тільки поки триває робота */
+function warnBeforeUnload(e){ e.preventDefault(); e.returnValue = ""; }
+
+function setWorking(on){
+  tryonBusy = on;
+  tryonStageEl.classList.toggle("working", on);
+  tryonProgEl.hidden = !on;
+  tryonKeepEl.hidden = !on;
+  tryonPickEl.disabled = on;
+  baseGridEl.querySelectorAll("button").forEach(b => b.disabled = on);
+  tryonRunEl.disabled = on;
+  document.getElementById("tryonClose").disabled = on;
+  if (on) window.addEventListener("beforeunload", warnBeforeUnload);
+  else    window.removeEventListener("beforeunload", warnBeforeUnload);
+}
+
+/* Секундомір на кнопці. Очікування без цифр читається як зависання.
+   Смуга йде до очікуваних 30 секунд, а не до стелі 90: інакше на 30-й
+   секунді, коли результат уже готовий, вона показувала б третину
+   і обіцяла ще хвилину. Після 30 повзе повільно й ніколи не впирається
+   в кінець раніше за сам результат. */
+const TRYON_EXPECTED_MS = 30000;
+
+function startTimer(){
+  const t0 = Date.now();
+  stopTimer();
+  const tick = () => {
+    const ms = Date.now() - t0;
+    const s  = Math.round(ms / 1000);
+    tryonRunEl.textContent = `Working… ${s}s`;
+
+    const pct = ms <= TRYON_EXPECTED_MS
+      ? (ms / TRYON_EXPECTED_MS) * 85                       // до 85% за очікуваний час
+      : 85 + ((ms - TRYON_EXPECTED_MS) / (POLL_CEILING_MS - TRYON_EXPECTED_MS)) * 12;
+    tryonBarEl.style.width = Math.min(97, pct) + "%";
+
+    tryonStageTxt.textContent =
+      s < 8  ? "Sending your photo" :
+      s < 25 ? "Fitting the item"   :
+      s < 50 ? "Still working — queues can be slow" :
+               "Almost there";
+  };
+  tick();
+  timerId = setInterval(tick, 1000);
+}
+function stopTimer(){ if (timerId){ clearInterval(timerId); timerId = null; } }
+
+async function startTryOn(){
+  const res = await fetch(TRYON_START_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      product_id:  tryonProduct.id,
+      model_image: modelImage.src
+    })
+  });
+  let data = null;
+  try{ data = await res.json(); }catch(_){ /* тіла немає або воно не JSON */ }
+  return { res, data };
+}
+
+async function pollOnce(jobId){
+  const res = await fetch(TRYON_STATUS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ job_id: jobId })
+  });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+function showResult(src){
+  /* Картинка може не намалюватись: обірваний base64, протухле посилання.
+     Мовчазний сірий екран — найгірший з можливих результатів, тому
+     записуємо примірку лише після того, як браузер справді її показав. */
+  tryonPhotoEl.onerror = () => {
+    tryonPhotoEl.onerror = null;
+    tryonPhotoEl.hidden = true;
+    tryonEmptyEl.hidden = false;
+    tryonRunEl.hidden = false;
+    tryonRunEl.textContent = "Try it on";
+    tryonRunEl.disabled = false;
+    tryonMetaEl.textContent = "";
+    tryonFail("The image was made but couldn't be loaded. This is usually the image transfer, not your photo.");
+    console.warn("[try-on] image failed to render. src starts with:", String(src).slice(0, 80),
+                 "| length:", String(src).length);
+  };
+  tryonPhotoEl.onload = () => {
+    tryonPhotoEl.onload = null;
+    tryonPhotoEl.onerror = null;
+    tryonRunEl.hidden = true;
+    tryonBasesEl.hidden = true;
+    tryonPickEl.hidden = false;
+    tryonPickEl.textContent = "Try another photo";
+
+    /* FASHN замінює річ тієї ж категорії, а не вдягає її поверх.
+       Тому зі списку образу стару теж прибираємо — інакше «Buy this look»
+       поклав би в кошик дві футболки, хоча на знімку одна.
+       Витіснене не губимо: запропонуємо його окремо при покупці. */
+    const cat  = tryonProduct.category || null;
+    const base = modelImage?.baseItems || [];
+    const kept      = base.filter(it => !cat || it.category !== cat);
+    const displaced = base.filter(it =>  cat && it.category === cat);
+
+    const items = [...kept, {
+      variant_id: tryonVariant?.id ?? null,
+      product_id: tryonProduct.id,
+      name:  tryonProduct.name,
+      color: tryonVariant?.color ?? null,
+      size:  tryonVariant?.size ?? null,
+      category: cat
+    }];
+
+    const seen = new Set(items.map(x => x.variant_id));
+    const replaced = [...(modelImage?.baseReplaced || []), ...displaced]
+      .filter(it => it.variant_id != null && !seen.has(it.variant_id) &&
+                    (seen.add(it.variant_id), true));
+
+    tryonMetaEl.textContent = items.length > 1
+      ? `${items.length} pieces in this look · generated preview`
+      : "Generated by our try-on provider · not a photo of the real product";
+
+    tryonResults.push({ image: src, items, replaced, made_at: Date.now() });
+    if (tryonResults.length > 10) tryonResults.shift();
+    saveTryons();
+    renderFittingRoom();
+
+    /* Купувати треба там, де людина щойно побачила результат.
+       Індекс запамʼятовуємо, бо старі образи витісняються з кінця масиву. */
+    shownLookIdx = tryonResults.length - 1;
+    const priceOf = it => Number(productsById.get(String(it.product_id))?.price || 0);
+    const total = items.filter(it => it.variant_id != null).reduce((s, it) => s + priceOf(it), 0);
+    const buyable = items.filter(it => it.variant_id != null).length;
+
+    tryonBuyEl.hidden = buyable === 0;
+    tryonBuyEl.disabled = false;
+    tryonBuyEl.textContent = items.length > 1
+      ? `Buy this look · ${money(total)}`
+      : `Add to cart · ${money(total)}`;
+  };
+
+  tryonPhotoEl.src = src;
+  tryonPhotoEl.hidden = false;
+  tryonEmptyEl.hidden = true;
+}
+
+async function runTryOn(){
+  if (tryonBusy || !modelImage || !tryonProduct) return;
+
+  tryonClearError();
+  setWorking(true);
+  startTimer();
+
+  try{
+    /* --- 1. запуск --- */
+    let started;
+    try{
+      started = await startTryOn();
+    }catch(err){
+      startFails++;
+      throw new Error("Can't reach the store. Check your connection and try again.");
+    }
+
+    const { res, data } = started;
+
+    if (res.status === 429){
+      startFails = 0;                       // сервіс живий, просто вибрана стеля
+      setWorking(false); stopTimer();
+      tryonRunEl.textContent = "Try it on";
+      tryonRunEl.disabled = true;
+      return tryonFail(data?.message || "Try-on is booked out for today. Come back tomorrow.");
+    }
+    if (res.status === 400){
+      startFails = 0;
+      setWorking(false); stopTimer();
+      tryonRunEl.textContent = "Try it on";
+      tryonRunEl.disabled = true;
+      return tryonFail(data?.message || "This piece isn't set up for try-on.");
+    }
+    if (!res.ok || !data?.job_id){
+      startFails++;
+      throw new Error("Try-on didn't start. Try again in a moment.");
+    }
+
+    startFails = 0;
+    lastJobId = data.job_id;
+
+    if (data.used != null && data.day_limit != null){
+      tryonUsageEl.textContent = `${data.used} of ${data.day_limit} try-ons used today`;
+      tryonUsageEl.hidden = false;
+    }
+
+    /* --- 2. опитування --- */
+    const t0 = Date.now();
+    let pollErrors = 0;
+    await sleep(POLL_FIRST_MS);
+
+    while (Date.now() - t0 < POLL_CEILING_MS){
+      let st;
+      try{
+        st = await pollOnce(lastJobId);
+        pollErrors = 0;
+      }catch(err){
+        if (++pollErrors > POLL_ERR_TOLERANCE) throw new Error("Lost contact while the image was being made.");
+        await sleep(POLL_EVERY_MS);
+        continue;
+      }
+
+      if (st.status === "completed"){
+        console.log("[try-on] completed. image type:", typeof st.image,
+                    "| length:", String(st.image ?? "").length,
+                    "| starts:", String(st.image ?? "").slice(0, 60));
+        const src = asImageSrc(st.image);
+        if (!src) throw new Error("The image came back empty or unreadable. Try again.");
+        stopTimer(); setWorking(false);
+        tryonBarEl.style.width = "100%";
+        return showResult(src);
+      }
+      if (st.status === "failed" || st.ok === false){
+        stopTimer(); setWorking(false);
+        tryonRunEl.textContent = "Try it on";
+        tryonRunEl.disabled = false;
+        return tryonFail(st.message || "That photo didn't work. Try a clear, waist-up or full-body shot.");
+      }
+      await sleep(POLL_EVERY_MS);
+    }
+
+    /* --- 3. стеля вибрана. Робота могла доїхати — квиток не викидаємо --- */
+    stopTimer(); setWorking(false);
+    tryonRunEl.textContent = "Check again";
+    tryonRunEl.disabled = false;
+    tryonFail("This is taking longer than usual. The image may still be on its way — check again.");
+
+  }catch(err){
+    stopTimer(); setWorking(false);
+    tryonRunEl.textContent = "Try it on";
+    tryonRunEl.disabled = false;
+    tryonFail(err.message);
+    if (startFails >= 2) blockTryOn("Try-on is unavailable right now. Reload the page to try again.");
+  }
+}
+
+/* Дозабрати результат після тайм-ауту: нової роботи не запускаємо,
+   лише питаємо статус наявного квитка. Кредити на це не витрачаються. */
+async function checkAgain(){
+  if (tryonBusy || !lastJobId) return;
+  tryonClearError();
+  tryonRunEl.disabled = true;
+  tryonRunEl.textContent = "Checking…";
+  try{
+    const st = await pollOnce(lastJobId);
+    if (st.status === "completed"){
+      const src = asImageSrc(st.image);
+      if (src) return showResult(src);
+    }
+    if (st.status === "failed"){
+      tryonRunEl.textContent = "Try it on";
+      tryonRunEl.disabled = false;
+      return tryonFail(st.message || "That photo didn't work. Try another one.");
+    }
+    tryonRunEl.textContent = "Check again";
+    tryonRunEl.disabled = false;
+    tryonFail("Still working on it. Give it a few more seconds.");
+  }catch(err){
+    tryonRunEl.textContent = "Check again";
+    tryonRunEl.disabled = false;
+    tryonFail("Couldn't reach the store. Try again in a moment.");
+  }
+}
+
+tryonRunEl.addEventListener("click", () => {
+  if (tryonRunEl.textContent === "Check again") checkAgain();
+  else runTryOn();
+});
+
+/* ---------- примірочна ---------- */
+
+const fitDrawer   = document.getElementById("fitDrawer");
+const fitBackdrop = document.getElementById("fitBackdrop");
+const fitBody     = document.getElementById("fitBody");
+const fitBtn      = document.getElementById("fitBtn");
+
+function renderFittingRoom(){
+  const n = tryonResults.length;
+  document.getElementById("fitCount").textContent = n;
+  fitBtn.hidden = n === 0;
+  fitBtn.classList.toggle("filled", n > 0);
+
+  if (!n){
+    fitBody.innerHTML = `<p class="cart-empty">Nothing tried on yet.<br>Open a piece and hit “See it on you”.</p>`;
+    return;
+  }
+
+  // найсвіжіше зверху — саме його шукають найчастіше
+  const rows = tryonResults.map((r, i) => ({ r, i })).reverse();
+
+  fitBody.innerHTML = rows.map(({ r, i }) => {
+    const buyable = r.items.filter(it => it.variant_id != null).length;
+    const multi   = r.items.length > 1;
+
+    const itemsHtml = r.items.map((it, j) => {
+      const label = [it.color, it.size].filter(Boolean).join(" / ") || "One size";
+      return `<button class="fit-item" data-fit="open" data-idx="${i}" data-item="${j}">
+                ${it.name} <span>${it.variant_id != null ? label : "Sold out"}</span>
+              </button>`;
+    }).join("");
+
+    return `
+      <div class="fit-row">
+        <a href="${r.image}" target="_blank" rel="noopener">
+          <img class="shot" src="${r.image}" alt="Your try-on" data-expired="${i}">
+        </a>
+        <div class="fit-info">
+          ${multi ? `<div class="fit-count">Look · ${r.items.length} pieces</div>` : ``}
+          <div class="fit-items">${itemsHtml}</div>
+          ${confirmIdx === i ? confirmBlock(r, i) : `
+          <div class="fit-actions">
+            <button class="mini-btn solid" data-fit="add" data-idx="${i}" ${buyable ? "" : "disabled"}>
+              ${multi ? "Buy this look" : "Add to cart"}
+            </button>
+            <button class="mini-btn" data-fit="drop" data-idx="${i}">Remove</button>
+          </div>`}
+        </div>
+      </div>`;
+  }).join("");
+
+  fitBody.innerHTML += `<p class="fit-foot-note">
+    These shots are generated previews, not photos of the real product.
+    They're kept for three days, then they expire.</p>`;
+
+  /* Знімок, який більше не відкривається, прибираємо мовчки:
+     перевіряти строк арифметикою ненадійно, а порожня рамка
+     виглядає як поломка магазину, хоча це просто термін зберігання. */
+  fitBody.querySelectorAll("img.shot").forEach(img => {
+    img.onerror = () => {
+      const idx = Number(img.dataset.expired);
+      if (Number.isInteger(idx)) tryonResults.splice(idx, 1);
+      saveTryons();
+      renderFittingRoom();
+    };
+  });
+}
+
+function openFittingRoom(){
+  renderFittingRoom();
+  fitDrawer.classList.add("open");
+  fitBackdrop.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeFittingRoom(){
+  fitDrawer.classList.remove("open");
+  fitBackdrop.classList.remove("open");
+  // під примірочною може лишатись відкрита картка товару
+  if (!backdrop.classList.contains("open")) document.body.style.overflow = "";
+}
+
+/* Речі, витіснені під час шарування, не зникають з поля зору:
+   людина їх міряла й могла хотіти, але мовчки класти їх у кошик не можна —
+   на знімку їх немає. Тому питаємо, і галочки стоять знятими. */
+let confirmIdx = null;
+
+function confirmBlock(look, i){
+  const inLook = look.items.filter(it => it.variant_id != null).length;
+  const opts = (look.replaced || []).map((it, j) => {
+    const label = [it.color, it.size].filter(Boolean).join(" / ") || "One size";
+    return `<label>
+              <input type="checkbox" data-rep="${j}">
+              <span>${it.name} <span class="sub">${label}</span></span>
+            </label>`;
+  }).join("");
+
+  return `
+    <div class="fit-confirm">
+      <p class="q">Adding ${inLook} ${inLook === 1 ? "piece" : "pieces"} from this look.
+      You swapped these out along the way — add them too?</p>
+      ${opts}
+      <div class="fit-actions">
+        <button class="mini-btn solid" data-fit="confirm" data-idx="${i}">Add to cart</button>
+        <button class="mini-btn" data-fit="cancel">Cancel</button>
+      </div>
+    </div>`;
+}
+
+/* Додавання з примірочної. Варіанти вже відомі — розмір обрали ще до примірки,
+   тож питати нема чого. Але залишок звіряємо з каталогом, а не з памʼяттю:
+   між примівкою і кліком товар могли розібрати. Тому додаємо, що можна,
+   і чесно кажемо, чого не вийшло, замість мовчазної часткової покупки. */
+function addPieces(list){
+  let added = 0;
+  const skipped = [];
+
+  for (const it of list){
+    if (it.variant_id == null){ skipped.push(it.name); continue; }
+
+    const hit = findVariant(it.variant_id);
+    if (!hit){ skipped.push(it.name); continue; }
+
+    const stock    = stockOf(hit.variant);
+    const existing = cart.find(c => c.variant_id === hit.variant.id);
+    const inCart   = existing?.quantity || 0;
+    if (inCart >= stock){ skipped.push(it.name); continue; }
+
+    if (existing) existing.quantity++;
+    else cart.push({
+      variant_id: hit.variant.id, product_id: hit.product.id,
+      name: hit.product.name, image_url: hit.product.image_url,
+      color: hit.variant.color, size: hit.variant.size,
+      price_at_purchase: hit.product.price,
+      stock,
+      quantity: 1
+    });
+    added++;
+  }
+
+  if (!added){
+    showToast(skipped.length === 1
+      ? `${skipped[0]} isn't available right now.`
+      : "None of these are available right now.");
+    return;
+  }
+
+  view = "cart";
+  render();
+  showToast(skipped.length
+    ? `Added ${added} — ${skipped.join(", ")} unavailable`
+    : (added === 1 ? "Added to cart" : `Added ${added} pieces`));
+}
+
+function addFromFittingRoom(idx){
+  const look = tryonResults[idx];
+  if (!look) return;
+
+  // є витіснене — спершу питаємо, інакше кладемо одразу
+  if ((look.replaced || []).length){
+    confirmIdx = idx;
+    renderFittingRoom();
+    return;
+  }
+  addPieces(look.items);
+}
+
+function confirmFromFittingRoom(idx){
+  const look = tryonResults[idx];
+  if (!look) return;
+
+  const extra = [...fitBody.querySelectorAll(".fit-confirm input:checked")]
+    .map(cb => look.replaced[Number(cb.dataset.rep)])
+    .filter(Boolean);
+
+  confirmIdx = null;
+  addPieces([...look.items, ...extra]);
+  renderFittingRoom();
+}
+
+fitBody.addEventListener("click", e => {
+  const btn = e.target.closest("[data-fit]");
+  if (!btn || btn.disabled) return;
+  const idx = Number(btn.dataset.idx);
+
+  if (btn.dataset.fit === "add")     addFromFittingRoom(idx);
+  if (btn.dataset.fit === "confirm") confirmFromFittingRoom(idx);
+  if (btn.dataset.fit === "cancel"){ confirmIdx = null; renderFittingRoom(); }
+  if (btn.dataset.fit === "drop"){ tryonResults.splice(idx, 1); confirmIdx = null; saveTryons(); renderFittingRoom(); }
+  if (btn.dataset.fit === "open"){
+    const item = tryonResults[idx]?.items?.[Number(btn.dataset.item)];
+    closeFittingRoom();
+    if (item) openModal(item.product_id);
+  }
+});
+
+fitBtn.addEventListener("click", openFittingRoom);
+document.getElementById("fitClose").addEventListener("click", closeFittingRoom);
+fitBackdrop.addEventListener("click", closeFittingRoom);
+
+renderFittingRoom();
+
+let shownLookIdx = null;   // образ, який зараз на екрані примірки
+
+tryonBuyEl.addEventListener("click", () => {
+  const look = tryonResults[shownLookIdx];
+  if (!look) return;
+
+  // є витіснене — питання ставимо в примірочній, щоб не плодити другу таку ж форму
+  if ((look.replaced || []).length){
+    confirmIdx = shownLookIdx;
+    closeTryOn();
+    closeModal();
+    openFittingRoom();
+    return;
+  }
+
+  addPieces(look.items);
+  tryonBuyEl.disabled = true;
+  tryonBuyEl.textContent = "In your cart";
+});
+
+/* Escape закриває саме верхній шар */
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && tryonBackdrop.classList.contains("open")){
+    e.stopImmediatePropagation();
+    if (!tryonBusy) closeTryOn();
+  }
+}, true);
+
+/* ============================================================ ЧАТ (без змін з М2) */
+const fabEl   = document.getElementById("chatFab");
+const panelEl = document.getElementById("chatPanel");
+const closeEl = document.getElementById("chatClose");
+const logEl   = document.getElementById("chatLog");
+const inputEl = document.getElementById("chatInput");
+const sendEl  = document.getElementById("chatSend");
+const scopeEl = document.getElementById("chatScope");
+let gender = "all";
+let chatHistory = [];   // { role: "user" | "assistant", text }
+
+scopeEl.addEventListener("click", e => {
+  const btn = e.target.closest(".scope-btn");
+  if (!btn) return;
+  gender = btn.dataset.gender;
+  scopeEl.querySelectorAll(".scope-btn").forEach(b => b.classList.toggle("active", b === btn));
+});
+function toggleChat(open){
+  panelEl.classList.toggle("hidden", !open);
+  if (open) inputEl.focus();
+}
+fabEl.addEventListener("click", () => toggleChat(panelEl.classList.contains("hidden")));
+closeEl.addEventListener("click", () => toggleChat(false));
+function scrollDown(){ logEl.scrollTop = logEl.scrollHeight; }
+
+function addMessage(text, kind){
+  const el = document.createElement("div");
+  el.className = "msg " + kind;
+  el.textContent = text;
+  logEl.appendChild(el);
+  scrollDown();
+}
+function addRecommendations(products){
+  products.forEach(p => {
+    const el = document.createElement("button");
+    el.className = "rec"; el.type = "button"; el.dataset.id = p.id;
+    el.innerHTML = `
+      <img class="rec-img" src="${p.image_url}" alt="${p.name}" onerror="this.style.opacity=.25">
+      <div class="rec-body">
+        <div class="rec-name">${p.name}</div>
+        <div class="rec-price">${money(p.price)}</div>
+        <div class="rec-reason">${p.reason ?? ""}</div>
+      </div>`;
+    el.addEventListener("click", () => openModal(p.id));
+    logEl.appendChild(el);
+  });
+  scrollDown();
+}
+function showTyping(){
+  const el = document.createElement("div");
+  el.className = "typing"; el.id = "typing";
+  el.innerHTML = "<span></span><span></span><span></span>";
+  logEl.appendChild(el); scrollDown();
+  return el;
+}
+function setBusy(busy){ sendEl.disabled = busy; inputEl.disabled = busy; }
+
+async function askAssistant(){
+  const query = inputEl.value.trim();
+  if (!query) return;
+  addMessage(query, "user");
+  inputEl.value = "";
+  setBusy(true);
+  const typingEl = showTyping();
+  try{
+    const res = await fetch(ASSISTANT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      // історія йде ДО того, як у неї потрапить поточне питання —
+      // роутер отримує окремо "що було раніше" і окремо "що спитали зараз"
+      body: JSON.stringify({ query, gender, history: chatHistory.slice(-6) })
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    typingEl.remove();
+
+    const reply = data.reply ?? "";
+    addMessage(reply, "bot");
+    if (Array.isArray(data.products) && data.products.length > 0) addRecommendations(data.products);
+
+    // у пам'ять кладемо не лише текст, а й назви показаних товарів —
+    // інакше "а дешевше?" не має до чого прив'язатись
+    const shown = (data.products || []).map(p => p.name).join(", ");
+    chatHistory.push({ role: "user", text: query });
+    chatHistory.push({ role: "assistant", text: shown ? `${reply} [showed: ${shown}]` : reply });
+    if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+  }catch(err){
+    typingEl.remove();
+    addMessage("The assistant isn't responding. Check that n8n and Qdrant are running. (" + err.message + ")", "error");
+  }finally{
+    setBusy(false); inputEl.focus();
+  }
+}
+sendEl.addEventListener("click", askAssistant);
+inputEl.addEventListener("keydown", e => { if (e.key === "Enter") askAssistant(); });
+
+/* ── Повернення зі Stripe ──────────────────────────────────────────
+   Сторінка НЕ знає, чи оплата пройшла — вона знає лише, що Stripe
+   повернув клієнта на success_url. Правду скаже вебхук.            */
+(function handleStripeReturn(){
+  const q  = new URLSearchParams(window.location.search);
+  const id = q.get("order");
+  if (!id) return;
+
+  if (q.get("paid") === "1"){
+    lastOrder = {
+      order_id: id,
+      title:   "Payment received",
+      heading: "Thanks — payment received.",
+      note:    "We're confirming it with the payment provider. The order status will update shortly.",
+      status:  "confirming"
+    };
+  } else if (q.get("cancelled") === "1"){
+    lastOrder = {
+      order_id: id,
+      title:   "Payment cancelled",
+      heading: "Payment was cancelled.",
+      note:    "Nothing has been charged. The order is held for 30 minutes.",
+      status:  "pending"
+    };
+  } else return;
+
+  view = "done";
+  render();
+  drawer.classList.add("open");
+  drawerBackdrop.classList.add("open");
+  document.body.style.overflow = "hidden";
+
+  // прибираємо параметри, щоб F5 не показав це вдруге
+  history.replaceState({}, "", window.location.pathname);
+})();
+</script>
+</body>
+</html>

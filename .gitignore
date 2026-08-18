@@ -1,0 +1,39 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.key
+*_secret*
+
+# Raw n8n exports.
+# `n8n export:workflow` strips credential bodies, but the editor's Download
+# button does not. Anything landing here is treated as unsafe by default;
+# only reviewed copies go into /workflows.
+workflows_raw/
+*_raw.json
+
+# n8n runtime data (contains the encrypted credential store)
+.n8n/
+database.sqlite
+
+# Test photos and try-on output — personal images, large files
+*.jpg
+*.jpeg
+*.JPEG
+!docs/*.jpg
+tryon_*/
+test_*/
+
+# Node
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editors
+.vscode/
+.idea/
