@@ -46,7 +46,7 @@ Each module builds on the previous one.
 **n8n** — orchestration, 9 workflows
 **Supabase (Postgres)** — 6 tables, 2 views, 4 stored procedures
 **Qdrant** — vector store, 1536-dim, cosine
-**OpenAI** — embeddings and chat completion
+**OpenAI** — `text-embedding-3-small` for the product index, chat completion for the assistant
 **Stripe** — Checkout, test mode
 **FASHN** — virtual try-on API
 **Telegram Bot API** — admin interface
