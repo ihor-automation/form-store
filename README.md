@@ -2,7 +2,9 @@
 
 An end-to-end e-commerce storefront where the backend is an n8n orchestration layer rather than an application server. A shopper can browse a catalogue, ask an assistant what to wear, try a garment on their own photo, pay, and have the owner fulfil the order from Telegram.
 
-Built as a portfolio project: it is not deployed, and Stripe runs in test mode. Everything else is real — real database, real vector search, real payment flow, real paid image API with a real budget to protect.
+Built as a portfolio project: the storefront runs locally and Stripe is in test mode. Everything else is real — real database, real vector search, real payment flow, real paid image API with a real budget to protect.
+
+The try-on module has since been split out and deployed as a service that any clothing shop can use through a link — see [Try-on as a service](#try-on-as-a-service).
 
 <!-- TODO: demo video link -->
 
@@ -41,10 +43,22 @@ Each module builds on the previous one.
 
 ---
 
+## Try-on as a service
+
+Module 6 started as a feature of this one store. It now also exists as a standalone, multi-shop version in [`tryon-service/`](tryon-service/): one hosted n8n workflow and one static fitting-room page that serve any number of shops.
+
+- A shop is a row in `tryon_shops` plus its items in `tryon_products`. Its fitting room opens only through its own link, `?shop=<id>`.
+- Each shop has its own daily cap, read from its row and enforced by one atomic statement, so one shop cannot spend another's budget.
+- It is deployed: n8n on Railway, the page on Netlify. The shop's own website is not touched.
+
+Schema, workflow, page and the reasoning behind them are in [`tryon-service/README.md`](tryon-service/README.md).
+
+---
+
 ## Stack
 
-**n8n** — orchestration, 9 workflows
-**Supabase (Postgres)** — 6 tables, 2 views, 4 stored procedures
+**n8n** — orchestration, 9 workflows for the store, plus 1 hosted workflow for the try-on service
+**Supabase (Postgres)** — 6 tables, 2 views, 4 stored procedures for the store; 3 tables and 2 functions for the try-on service
 **Qdrant** — vector store, 1536-dim, cosine
 **OpenAI** — `text-embedding-3-small` for the product index, chat completion for the assistant
 **Stripe** — Checkout, test mode
@@ -66,6 +80,7 @@ workflows/               n8n exports, credentials stripped
 frontend/index.html      the entire storefront
 docs/                    architecture map
 .env.example             what has to be configured
+tryon-service/           the multi-shop try-on service: page, workflow, schema
 ```
 
 `workflows/` was produced with `n8n export:workflow`, not the editor's Download button — the latter embeds credential bodies in the JSON.
@@ -186,8 +201,8 @@ The frontend can be bypassed by posting to the webhook directly, so country, pho
 
 Stated plainly, because most of these are choices rather than oversights.
 
-- **No deployment.** Runs locally. Out of scope for this phase.
-- **No authentication.** Consequently the try-on quota is store-wide rather than per user. A per-person limit without accounts would rest on a `localStorage` id, which is a turnstile, not armour.
+- **The storefront is not deployed.** It runs locally. Only the try-on service in `tryon-service/` is hosted.
+- **No authentication.** Consequently the storefront's try-on quota is store-wide rather than per user. A per-person limit without accounts would rest on a `localStorage` id, which is a turnstile, not armour — the try-on service has exactly such a limit, and treats its per-shop cap on the server as the real control.
 - **Stripe is in test mode.** No real money moves.
 - **Try-on does not model fit.** The API renders the garment, not the size — the selected size is what goes into the cart, and the UI says so explicitly.
 - **One photo per product**, so try-on shows the primary colour regardless of the variant selected.
