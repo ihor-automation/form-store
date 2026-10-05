@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Fitting room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400..700&family=Jost:wght@300..600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --page: #FFFFFF;
+    --ink: #1B1F21;
+    --muted: #697175;
+    --line: #DADEDF;
+    --silver: #EEF0F0;
+    --silver-deep: #E1E5E5;
+    --steel: #A9B0B3;
+    --green: #1F4033;
+    --green-deep: #163026;
+    --alert: #A12A1E;
+    --display: "Bodoni Moda", "Didot", "Bodoni MT", Georgia, serif;
+    --text: "Jost", "Futura", "Century Gothic", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: var(--text);
+    font-size: 1.0625rem;
+    line-height: 1.5;
+  }
+  img { display: block; max-width: 100%; }
+  button { font: inherit; color: inherit; border-radius: 0; }
+  [hidden] { display: none !important; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+  /* ---------- page frame ---------- */
+  .app {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 14px 16px 128px;
+  }
+
+  .topbar { display: flex; justify-content: flex-end; }
+  .contact-btn {
+    border: 1px solid var(--ink);
+    padding: 10px 14px;
+    background: none;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .contact-btn:hover { background: var(--ink); color: #fff; }
+
+  .head { margin-top: 26px; text-align: center; }
+  .head h1 {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: clamp(2.75rem, 12vw, 3.5rem);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .lede {
+    margin: 12px auto 0;
+    max-width: 36ch;
+    color: var(--muted);
+    text-wrap: balance;
+  }
+
+  .layout { margin-top: 30px; }
+
+  /* ---------- photo area ---------- */
+  .stage { --ar: 0.75; --maxh: 360px; }
+  .stage.has-photo { --maxh: min(62dvh, 560px); }
+
+  .mirror {
+    position: relative;
+    width: min(100%, calc(var(--maxh) * var(--ar)));
+    aspect-ratio: var(--ar);
+    margin: 0 auto;
+    background: var(--silver);
+    overflow: hidden;
+    scroll-margin: 16px 0 110px;
+  }
+  .mirror[data-state="empty"] { background: linear-gradient(160deg, #F4F6F6 0%, #E3E7E7 100%); }
+  .mirror.is-over { outline: 2px solid var(--green); outline-offset: -2px; }
+
+  .mirror-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .mirror[data-state="busy"] .mirror-img { opacity: 0.4; }
+
+  .mirror-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    border: 0;
+    background: none;
+    text-align: center;
+    cursor: pointer;
+  }
+  .mirror-empty:hover { background: rgba(27, 31, 33, 0.04); }
+  .plus {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 12px;
+  }
+  .plus::before, .plus::after {
+    content: "";
+    position: absolute;
+    left: 0; top: 50%;
+    width: 40px; height: 1px;
+    background: var(--ink);
+  }
+  .plus::after { transform: rotate(90deg); }
+  .mirror-empty strong {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 1.625rem;
+    line-height: 1.1;
+  }
+  .mirror-empty .sub { color: var(--muted); font-size: 0.9375rem; line-height: 1.4; max-width: 24ch; }
+
+  .mirror-busy {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 16px 18px 18px;
+    background: #fff;
+    border-top: 1px solid var(--line);
+  }
+  .mirror-busy p { margin: 0 0 12px; line-height: 1.35; }
+  .bar { height: 2px; background: var(--silver-deep); overflow: hidden; }
+  .bar span { display: block; height: 100%; width: 0; background: var(--green); }
+
+  /* ---------- under the frame ---------- */
+  .toggle-row { text-align: center; }
+  .view-toggle {
+    display: inline-flex;
+    gap: 28px;
+    margin-top: 14px;
+  }
+  .view-toggle button {
+    border: 0;
+    border-bottom: 1px solid transparent;
+    background: none;
+    padding: 6px 0;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .view-toggle button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--green); }
+
+  .under { max-width: 460px; margin: 2px auto 0; text-align: center; }
+  .hint-line { margin: 12px 0 0; color: var(--muted); font-size: 0.9375rem; text-wrap: pretty; }
+  .notice { margin: 12px 0 0; color: var(--alert); text-wrap: pretty; }
+  .notice:empty { display: none; }
+
+  .links { margin-top: 10px; display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; }
+  .link {
+    border: 0;
+    background: none;
+    padding: 4px 0;
+    color: var(--ink);
+    font-size: 0.9375rem;
+    text-decoration: underline;
+    text-decoration-color: var(--green);
+    text-underline-offset: 4px;
+    cursor: pointer;
+  }
+
+  /* ---------- action block: pinned to the bottom on phones, under the frame on computers ---------- */
+  .dock {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 5;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    background: #fff;
+    border-top: 1px solid var(--line);
+  }
+  .dock-in {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+  .dock-thumb {
+    flex: none;
+    width: 48px; height: 48px;
+    padding: 3px;
+    background: #fff;
+    border: 1px solid var(--line);
+    object-fit: contain;
+  }
+  .dock-text { flex: 1; min-width: 0; }
+  .dock-item {
+    margin: 0;
+    font-weight: 500;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dock-left { margin: 2px 0 0; color: var(--muted); font-size: 0.8125rem; }
+  .dock-left:empty { display: none; }
+
+  .btn-main {
+    flex: none;
+    border: 0;
+    padding: 18px 20px;
+    background: var(--green);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .btn-main:hover { background: var(--green-deep); }
+  .btn-main:disabled { background: var(--silver-deep); color: #8B9397; cursor: default; }
+
+  /* ---------- racks ---------- */
+  .racks { margin-top: 44px; }
+  .rack + .rack { margin-top: 40px; }
+  .rack h2 {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 1.75rem;
+    line-height: 1.1;
+  }
+  .rack-hint { margin: 6px 0 0; max-width: 46ch; color: var(--muted); font-size: 0.9375rem; }
+
+  .rail {
+    display: flex;
+    gap: 10px;
+    margin: 16px -16px 0;
+    padding: 0 16px 8px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 16px;
+    scrollbar-width: none;
+  }
+  .rail::-webkit-scrollbar { display: none; }
+  .tile {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-self: flex-start;
+    width: 150px;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+    scroll-snap-align: start;
+  }
+  .tile-pic {
+    position: relative;
+    display: block;
+    aspect-ratio: 4 / 5;
+    padding: 10px;
+    background: #fff;
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .tile-pic img { width: 100%; height: 100%; object-fit: contain; }
+  .tile:hover .tile-pic { border-color: var(--steel); }
+  .tile-name {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: 10px;
+    font-size: 0.9375rem;
+    line-height: 1.3;
+  }
+  .tile[aria-pressed="true"] .tile-pic { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+  .tile[aria-pressed="true"] .tile-pic::after {
+    content: "";
+    position: absolute;
+    top: 0; right: 0;
+    width: 26px; height: 26px;
+    background: var(--green) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.3l2.3 2.3 4.7-5' fill='none' stroke='%23fff' stroke-width='1.3' stroke-linecap='square'/%3E%3C/svg%3E") center / 13px no-repeat;
+  }
+  .tile[aria-pressed="true"] .tile-name { color: var(--green); font-weight: 500; }
+
+  .fine {
+    margin-top: 56px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.875rem;
+  }
+  .fine p { margin: 0 0 6px; max-width: 62ch; }
+  .fine .link { font-size: 0.875rem; color: var(--muted); }
+
+  /* ---------- contact sheet ---------- */
+  .sheet {
+    width: calc(100% - 32px);
+    max-width: 440px;
+    padding: 30px 26px 14px;
+    border: 0;
+    border-radius: 0;
+    color: var(--ink);
+    box-shadow: 0 30px 80px rgba(27, 31, 33, 0.35);
+  }
+  .sheet::backdrop { background: rgba(27, 31, 33, 0.55); }
+  .sheet h2 {
+    margin: 0 36px 0 0;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 1.875rem;
+    line-height: 1.05;
+  }
+  .sheet p { margin: 12px 0 0; color: var(--muted); }
+  .sheet-close {
+    position: absolute;
+    top: 14px; right: 14px;
+    width: 36px; height: 36px;
+    border: 0;
+    background: none;
+    font-size: 1.5rem;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .ways { display: grid; margin-top: 20px; }
+  .way {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+    padding: 16px 0;
+    border-top: 1px solid var(--line);
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .way b { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+  .way span { overflow-wrap: anywhere; text-decoration: underline; text-decoration-color: var(--green); text-underline-offset: 4px; }
+  .way:hover span { color: var(--green); }
+
+  /* ---------- loading and closed ---------- */
+  .solo {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 32px 20px;
+  }
+  .solo h1 {
+    margin: 0;
+    max-width: 16ch;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: clamp(2rem, 8vw, 3rem);
+    line-height: 1.05;
+  }
+  .solo p { margin: 14px 0 0; color: var(--muted); max-width: 42ch; }
+
+  /* ---------- wide screens: frame stays put, racks scroll ---------- */
+  @media (min-width: 900px) {
+    .app { position: relative; padding: 22px 40px 132px; }
+    .topbar { position: absolute; top: 28px; right: 40px; }
+    .head { margin-top: 2px; }
+    .head h1 { font-size: 3.5rem; }
+    .lede { max-width: none; margin-top: 10px; }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(360px, 520px) minmax(0, 1fr);
+      gap: 64px;
+      align-items: start;
+      margin-top: 30px;
+    }
+    .stage,
+    .stage.has-photo { --maxh: max(260px, min(660px, calc(100dvh - 300px))); }
+    .stage { position: sticky; top: 24px; z-index: 2; }
+
+    .racks { margin-top: 0; }
+    .rail {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+      gap: 28px 14px;
+      margin: 18px 0 0;
+      padding: 0;
+      overflow: visible;
+    }
+    .tile { width: auto; align-self: start; }
+    .btn-main { padding: 19px 40px; }
+  }
+
+  /* computers with enough screen height: the button sits under the frame and the whole
+     left column is sized to fit the screen, so it stays in view while the items scroll */
+  @media (min-width: 900px) and (min-height: 620px) {
+    .app { padding-bottom: 64px; }
+    .stage,
+    .stage.has-photo { --maxh: max(260px, min(680px, calc(100dvh - 350px))); }
+    .dock {
+      position: static;
+      width: min(100%, max(320px, calc(var(--maxh) * var(--ar))));
+      margin: 18px auto 0;
+      padding: 0;
+      background: none;
+      border: 0;
+    }
+    .dock-in { flex-direction: column; align-items: stretch; gap: 10px; max-width: none; text-align: center; }
+    .dock-thumb { display: none; }
+    .btn-main { width: 100%; padding: 20px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="solo" id="loading">
+  <p>Opening the fitting room.</p>
+</div>
+
+<div class="solo" id="closed" hidden>
+  <h1 id="closedTitle">This fitting room is closed</h1>
+  <p id="closedText"></p>
+</div>
+
+<main class="app" id="app" hidden>
+  <div class="topbar">
+    <button class="contact-btn" id="contactOpen" type="button">Want this for your store?</button>
+  </div>
+
+  <header class="head">
+    <h1>Fitting room</h1>
+    <p class="lede">Pick an item, add a photo of yourself, and see how it looks on you.</p>
+  </header>
+
+  <div class="layout">
+    <section class="stage" id="stage" aria-label="Your photo and the result">
+      <div class="mirror" id="mirror" data-state="empty">
+        <img class="mirror-img" id="mirrorImg" alt="" hidden>
+        <button class="mirror-empty" id="mirrorEmpty" type="button">
+          <span class="plus" aria-hidden="true"></span>
+          <strong>Add your photo</strong>
+          <span class="sub" id="mirrorHint"></span>
+        </button>
+        <div class="mirror-busy" id="mirrorBusy" hidden>
+          <p id="busyText"></p>
+          <div class="bar" role="progressbar" aria-label="Try-on progress"><span id="barFill"></span></div>
+        </div>
+      </div>
+
+      <div class="toggle-row">
+        <div class="view-toggle" id="viewToggle" hidden>
+          <button type="button" id="viewResult" aria-pressed="true">Result</button>
+          <button type="button" id="viewPhoto" aria-pressed="false">Your photo</button>
+        </div>
+      </div>
+
+      <div class="dock">
+        <div class="dock-in">
+          <img class="dock-thumb" id="dockThumb" alt="" hidden>
+          <div class="dock-text">
+            <p class="dock-item" id="dockItem"></p>
+            <p class="dock-left" id="dockLeft"></p>
+          </div>
+          <button class="btn-main" id="mainBtn" type="button"></button>
+        </div>
+      </div>
+
+      <div class="under">
+        <p class="hint-line" id="hintLine" hidden></p>
+        <p class="notice" id="notice" role="alert"></p>
+        <div class="links">
+          <button class="link" id="changePhoto" type="button" hidden>Change photo</button>
+          <a class="link" id="openFull" href="#" target="_blank" rel="noopener" hidden>Open full image</a>
+        </div>
+      </div>
+
+      <input type="file" id="file" accept="image/*" hidden>
+    </section>
+
+    <section class="racks" id="racks" aria-label="Items you can try on"></section>
+  </div>
+
+  <footer class="fine">
+    <p>This shows how an item looks on you. It doesn't predict size or fit.</p>
+    <p>Your photo is used only to create the try-on image.</p>
+    <p><button class="link" id="contactOpen2" type="button">Built by Ihor Pidhainyi</button></p>
+  </footer>
+
+</main>
+
+<dialog class="sheet" id="contact" aria-labelledby="contactTitle">
+  <button class="sheet-close" id="contactClose" type="button" aria-label="Close">&times;</button>
+  <h2 id="contactTitle">Try-on for your store</h2>
+  <p>I'm Ihor Pidhainyi. I set up this fitting room for clothing shops, with your own items and your own link. Message me and I'll make a demo for you.</p>
+  <div class="ways">
+    <a class="way" href="https://t.me/Ihorrrok" target="_blank" rel="noopener"><b>Telegram</b><span>@Ihorrrok</span></a>
+    <a class="way" href="https://wa.me/00000000000" target="_blank" rel="noopener"><b>WhatsApp</b><span>+00 000 000 0000</span></a>
+    <a class="way" href="mailto:pidhainyi.automation@gmail.com"><b>Email</b><span>pidhainyi.automation@gmail.com</span></a>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- settings ----------
+  var API = 'https://n8n-production-f5950.up.railway.app/webhook';
+  var DEVICE_DAILY_LIMIT = 5;      // try-ons per device per day (soft limit; the shop's daily cap is enforced on the server)
+  var MAX_PHOTO_SIDE = 1600;       // photos are shrunk to this before upload
+  var POLL_EVERY_MS = 3000;
+  var GIVE_UP_AFTER_MS = 150000;
+
+  var GROUPS = [
+    { type: 'top',    title: 'Tops and shirts',     hint: 'A photo from the waist up works best. Separate top and bottom, not a dress.' },
+    { type: 'bottom', title: 'Trousers and skirts', hint: 'A photo that shows your legs works best.' },
+    { type: 'dress',  title: 'Dresses',             hint: 'A full-length photo works best.' },
+    { type: 'shoes',  title: 'Shoes',               hint: 'A photo of your legs and feet works best.' },
+    { type: 'bag',    title: 'Bags',                hint: 'A photo with your arm or shoulder in view works best.' }
+  ];
+  var GENERAL_HINT = "Pick a photo that suits what you're trying on.";
+
+  var MESSAGES = {
+    daily_limit: "Today's try-ons for this shop are used up. Come back tomorrow.",
+    shop_not_available: 'This fitting room is closed.',
+    vton_not_available: "This item can't be tried on right now. Pick another one.",
+    network: "Couldn't reach the fitting room. Check your connection and try again.",
+    timeout: 'This is taking longer than it should. Try again in a minute.',
+    failed: "We couldn't use this photo. Try a clear one where you're easy to see.",
+    photo: "This file couldn't be read as a photo. Try a JPG or PNG.",
+    result: "The result couldn't be loaded. Try again."
+  };
+
+  // ---------- state ----------
+  var shopId = new URLSearchParams(location.search).get('shop') || '';
+  var state = {
+    products: [],
+    selected: null,   // product object
+    photo: null,      // data URL of the shrunk photo
+    result: null,     // result image URL
+    view: 'photo',    // 'photo' | 'result'
+    busy: false
+  };
+
+  function $(id) { return document.getElementById(id); }
+  var el = {
+    loading: $('loading'), closed: $('closed'), closedTitle: $('closedTitle'), closedText: $('closedText'),
+    app: $('app'), stage: $('stage'),
+    mirror: $('mirror'), mirrorImg: $('mirrorImg'), mirrorEmpty: $('mirrorEmpty'), mirrorHint: $('mirrorHint'),
+    mirrorBusy: $('mirrorBusy'), busyText: $('busyText'), barFill: $('barFill'),
+    viewToggle: $('viewToggle'), viewResult: $('viewResult'), viewPhoto: $('viewPhoto'),
+    hintLine: $('hintLine'), notice: $('notice'), changePhoto: $('changePhoto'), openFull: $('openFull'),
+    dockThumb: $('dockThumb'), dockItem: $('dockItem'), dockLeft: $('dockLeft'), mainBtn: $('mainBtn'),
+    file: $('file'), racks: $('racks'),
+    contact: $('contact'), contactOpen: $('contactOpen'), contactOpen2: $('contactOpen2'), contactClose: $('contactClose')
+  };
+
+  // ---------- small helpers ----------
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  function groupFor(type) {
+    for (var i = 0; i < GROUPS.length; i++) if (GROUPS[i].type === type) return GROUPS[i];
+    return null;
+  }
+
+  function api(path, body) {
+    var opts = body
+      ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+      : { method: 'GET' };
+    return fetch(API + path, opts).then(function (r) {
+      return r.json().catch(function () { return { ok: false, error: 'bad_response' }; });
+    });
+  }
+
+  // per-device counter, kept in this browser only
+  function usageKey() {
+    return 'fittingroom:' + shopId + ':' + new Date().toISOString().slice(0, 10);
+  }
+  function triesUsed() {
+    try { return parseInt(localStorage.getItem(usageKey()) || '0', 10) || 0; } catch (e) { return 0; }
+  }
+  function countTry() {
+    try { localStorage.setItem(usageKey(), String(triesUsed() + 1)); } catch (e) { /* private mode: no counter */ }
+  }
+  function triesLeft() { return Math.max(0, DEVICE_DAILY_LIMIT - triesUsed()); }
+
+  // shrink the photo in the browser so uploads stay small and fast
+  function preparePhoto(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var scale = Math.min(1, MAX_PHOTO_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+          var w = Math.max(1, Math.round(img.naturalWidth * scale));
+          var h = Math.max(1, Math.round(img.naturalHeight * scale));
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.9));
+        } catch (e) { reject(e); }
+        finally { URL.revokeObjectURL(url); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('unreadable')); };
+      img.src = url;
+    });
+  }
+
+  function loadImage(src) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () { resolve(src); };
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+
+  // ---------- rendering ----------
+  function say(text) { el.notice.textContent = text || ''; }
+
+  function render() {
+    var item = state.selected;
+    var group = item ? groupFor(item.photo_type) : null;
+    var hint = group ? group.hint : GENERAL_HINT;
+    var left = triesLeft();
+
+    // photo frame
+    var showing = state.busy ? 'busy'
+      : (state.result && state.view === 'result') ? 'result'
+      : state.photo ? 'photo' : 'empty';
+    el.mirror.dataset.state = showing;
+    el.stage.classList.toggle('has-photo', !!state.photo);
+
+    var src = (showing === 'result') ? state.result : state.photo;
+    if (src) {
+      if (el.mirrorImg.getAttribute('src') !== src) el.mirrorImg.src = src;
+      el.mirrorImg.alt = showing === 'result' ? 'You wearing ' + (item ? item.name : 'the item') : 'Your photo';
+    }
+    el.mirrorImg.hidden = !src;
+    el.mirrorEmpty.hidden = showing !== 'empty';
+    el.mirrorHint.textContent = hint;
+    el.mirrorBusy.hidden = showing !== 'busy';
+
+    // under the frame
+    el.viewToggle.hidden = !state.result || state.busy;
+    el.viewResult.setAttribute('aria-pressed', String(state.view === 'result'));
+    el.viewPhoto.setAttribute('aria-pressed', String(state.view !== 'result'));
+    el.hintLine.hidden = !(item && state.photo) || state.busy || showing === 'result';
+    el.hintLine.textContent = hint;
+    el.changePhoto.hidden = !state.photo || state.busy;
+    el.openFull.hidden = showing !== 'result';
+    if (state.result) el.openFull.href = state.result;
+
+    // action bar
+    el.dockItem.textContent = item ? item.name : 'Pick an item to try on';
+    el.dockLeft.textContent = (item || state.photo)
+      ? left + ' of ' + DEVICE_DAILY_LIMIT + ' try-ons left today'
+      : '';
+    el.dockThumb.hidden = !item;
+    if (item && el.dockThumb.getAttribute('src') !== item.image_url) el.dockThumb.src = item.image_url;
+
+    var label, disabled = false;
+    if (state.busy) { label = 'Trying it on'; disabled = true; }
+    else if (!state.photo) { label = 'Add your photo'; }
+    else if (!item) { label = 'Pick an item'; disabled = true; }
+    else if (left <= 0) { label = 'No try-ons left'; disabled = true; }
+    else { label = 'Try it on'; }
+    el.mainBtn.textContent = label;
+    el.mainBtn.disabled = disabled;
+  }
+
+  function renderRacks() {
+    var known = GROUPS.map(function (g) { return g.type; });
+    var groups = GROUPS.slice();
+    var hasOther = state.products.some(function (p) { return known.indexOf(p.photo_type) === -1; });
+    if (hasOther) groups.push({ type: null, title: 'More items', hint: GENERAL_HINT });
+
+    el.racks.textContent = '';
+    groups.forEach(function (g) {
+      var items = state.products.filter(function (p) {
+        return g.type ? p.photo_type === g.type : known.indexOf(p.photo_type) === -1;
+      });
+      if (!items.length) return;
+
+      var rack = document.createElement('div');
+      rack.className = 'rack';
+
+      var h = document.createElement('h2');
+      h.textContent = g.title;
+      var hint = document.createElement('p');
+      hint.className = 'rack-hint';
+      hint.textContent = g.hint;
+
+      var rail = document.createElement('div');
+      rail.className = 'rail';
+
+      items.forEach(function (p) {
+        var tile = document.createElement('button');
+        tile.type = 'button';
+        tile.className = 'tile';
+        tile.setAttribute('aria-pressed', 'false');
+        tile.dataset.id = String(p.id);
+
+        var pic = document.createElement('span');
+        pic.className = 'tile-pic';
+        var img = document.createElement('img');
+        img.loading = 'lazy';
+        img.alt = '';
+        img.src = p.image_url;
+        img.onerror = function () { img.remove(); };
+        pic.appendChild(img);
+
+        var name = document.createElement('span');
+        name.className = 'tile-name';
+        name.textContent = p.name;
+
+        tile.appendChild(pic);
+        tile.appendChild(name);
+        tile.addEventListener('click', function () { selectItem(p); });
+        rail.appendChild(tile);
+      });
+
+      rack.appendChild(h);
+      rack.appendChild(hint);
+      rack.appendChild(rail);
+      el.racks.appendChild(rack);
+    });
+  }
+
+  // ---------- actions ----------
+  function selectItem(p) {
+    if (state.busy) return;
+    state.selected = p;
+    var tiles = el.racks.querySelectorAll('.tile');
+    for (var i = 0; i < tiles.length; i++) {
+      tiles[i].setAttribute('aria-pressed', String(tiles[i].dataset.id === String(p.id)));
+    }
+    say('');
+    render();
+  }
+
+  function pickPhoto() { el.file.click(); }
+
+  function usePhoto(file) {
+    if (!file || state.busy) return;
+    say('');
+    preparePhoto(file).then(function (dataUrl) {
+      state.photo = dataUrl;
+      state.result = null;
+      state.view = 'photo';
+      render();
+    }).catch(function () {
+      say(MESSAGES.photo);
+    });
+  }
+
+  function runProgress() {
+    var started = Date.now();
+    el.barFill.style.width = '0%';
+    var timer = setInterval(function () {
+      var t = (Date.now() - started) / 1000;
+      var p = Math.min(0.95, 1 - Math.exp(-t / 14));   // about 88% at 30 s, then slows
+      el.barFill.style.width = (p * 100).toFixed(1) + '%';
+    }, 400);
+    return function stop() { clearInterval(timer); };
+  }
+
+  function waitForResult(jobId) {
+    var started = Date.now();
+    function step() {
+      if (Date.now() - started > GIVE_UP_AFTER_MS) return Promise.resolve({ ok: false, message: MESSAGES.timeout });
+      return sleep(POLL_EVERY_MS)
+        .then(function () { return api('/tryon-status', { job_id: jobId }); })
+        .then(function (s) {
+          if (s && s.status === 'completed' && s.image) return { ok: true, image: s.image };
+          if (s && s.status === 'failed') return { ok: false, message: s.message || MESSAGES.failed };
+          return step();
+        }, function () { return step(); });   // a dropped poll is not a failure, keep asking
+    }
+    return step();
+  }
+
+  function tryOn() {
+    var item = state.selected;
+    if (!item || !state.photo || state.busy || triesLeft() <= 0) return;
+
+    state.busy = true;
+    say('');
+    el.busyText.textContent = 'Trying on ' + item.name + '. About 30 seconds.';
+    render();
+    el.mirror.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    var stopProgress = runProgress();
+
+    api('/tryon-start', { shop_id: shopId, product_id: item.id, model_image: state.photo })
+      .then(function (start) {
+        if (!start || !start.ok || !start.job_id) {
+          var code = start && start.error;
+          if (code === 'shop_not_available') { showClosed(MESSAGES.shop_not_available, 'Ask the shop for a fresh link.'); }
+          return { ok: false, message: MESSAGES[code] || MESSAGES.network };
+        }
+        countTry();
+        return waitForResult(start.job_id);
+      }, function () {
+        return { ok: false, message: MESSAGES.network };
+      })
+      .then(function (res) {
+        if (!res.ok) return res;
+        return loadImage(res.image).then(function () { return res; }, function () {
+          return { ok: false, message: MESSAGES.result };
+        });
+      })
+      .then(function (res) {
+        stopProgress();
+        state.busy = false;
+        if (res.ok) {
+          state.result = res.image;
+          state.view = 'result';
+        } else {
+          say(res.message);
+        }
+        render();
+      });
+  }
+
+  function showClosed(title, text) {
+    el.loading.hidden = true;
+    el.app.hidden = true;
+    el.closedTitle.textContent = title;
+    el.closedText.textContent = text;
+    el.closed.hidden = false;
+  }
+
+  function openContact() {
+    if (typeof el.contact.showModal === 'function') el.contact.showModal();
+    else el.contact.setAttribute('open', '');
+  }
+
+  // ---------- wiring ----------
+  el.mainBtn.addEventListener('click', function () {
+    if (!state.photo) pickPhoto(); else tryOn();
+  });
+  el.mirrorEmpty.addEventListener('click', pickPhoto);
+  el.changePhoto.addEventListener('click', pickPhoto);
+  el.file.addEventListener('change', function () {
+    var file = el.file.files && el.file.files[0];
+    el.file.value = '';
+    usePhoto(file);
+  });
+  el.viewResult.addEventListener('click', function () { state.view = 'result'; render(); });
+  el.viewPhoto.addEventListener('click', function () { state.view = 'photo'; render(); });
+
+  // the frame takes the shape of whatever picture is in it
+  el.mirrorImg.addEventListener('load', function () {
+    var ar = el.mirrorImg.naturalWidth / el.mirrorImg.naturalHeight;
+    if (ar > 0) el.stage.style.setProperty('--ar', Math.min(1.5, Math.max(0.56, ar)).toFixed(4));
+  });
+
+  // a photo can also be dropped onto the frame
+  el.mirror.addEventListener('dragover', function (e) { e.preventDefault(); el.mirror.classList.add('is-over'); });
+  el.mirror.addEventListener('dragleave', function () { el.mirror.classList.remove('is-over'); });
+  el.mirror.addEventListener('drop', function (e) {
+    e.preventDefault();
+    el.mirror.classList.remove('is-over');
+    usePhoto(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
+  });
+
+  el.contactOpen.addEventListener('click', openContact);
+  el.contactOpen2.addEventListener('click', openContact);
+  el.contactClose.addEventListener('click', function () { el.contact.close(); });
+  el.contact.addEventListener('click', function (e) { if (e.target === el.contact) el.contact.close(); });
+
+  // ---------- start ----------
+  if (!shopId) {
+    showClosed('This link is missing its shop code', 'Ask the shop for a fresh link to its fitting room.');
+    return;
+  }
+
+  api('/tryon-products?shop=' + encodeURIComponent(shopId)).then(function (data) {
+    if (!data || !data.ok) {
+      showClosed('This fitting room is closed', 'Ask the shop for a fresh link.');
+      return;
+    }
+    state.products = data.products || [];
+    renderRacks();
+    render();
+    el.loading.hidden = true;
+    el.app.hidden = false;
+  }, function () {
+    showClosed("Couldn't open the fitting room", 'Check your connection and reload the page.');
+  });
+})();
+</script>
+</body>
+</html>
