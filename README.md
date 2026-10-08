@@ -45,7 +45,7 @@ Each module builds on the previous one.
 
 ## Try-on as a service
 
-Module 6 started as a feature of this one store. It now also exists as a standalone, multi-shop version in [`tryon-service/`](tryon-service/): one hosted n8n workflow and one static fitting-room page that serve any number of shops.
+Module 6 started as a feature of this one store. It now also exists as a standalone, multi-shop version in [`tryon-service/`](tryon-service/): one hosted n8n workflow and one static fitting-room page that serve any number of shops, plus an error workflow that reports failures to Telegram.
 
 - A shop is a row in `tryon_shops` plus its items in `tryon_products`. Its fitting room opens only through its own link, `?shop=<id>`.
 - Each shop has its own daily cap, read from its row and enforced by one atomic statement, so one shop cannot spend another's budget.
@@ -57,8 +57,8 @@ Schema, workflow, page and the reasoning behind them are in [`tryon-service/READ
 
 ## Stack
 
-**n8n** — orchestration, 9 workflows for the store, plus 1 hosted workflow for the try-on service
-**Supabase (Postgres)** — 6 tables, 2 views, 4 stored procedures for the store; 3 tables and 2 functions for the try-on service
+**n8n** — orchestration, 9 workflows for the store, plus 2 hosted workflows for the try-on service (the service and its error alerts)
+**Supabase (Postgres)** — 6 tables, 2 views, 4 stored procedures for the store; 4 tables and 2 functions for the try-on service
 **Qdrant** — vector store, 1536-dim, cosine
 **OpenAI** — `text-embedding-3-small` for the product index, chat completion for the assistant
 **Stripe** — Checkout, test mode
@@ -80,7 +80,7 @@ workflows/               n8n exports, credentials stripped
 frontend/index.html      the entire storefront
 docs/                    architecture map
 .env.example             what has to be configured
-tryon-service/           the multi-shop try-on service: page, workflow, schema
+tryon-service/           the multi-shop try-on service: page, workflows, schema
 ```
 
 `workflows/` was produced with `n8n export:workflow`, not the editor's Download button — the latter embeds credential bodies in the JSON.

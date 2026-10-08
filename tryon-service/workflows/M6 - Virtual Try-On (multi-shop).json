@@ -448,6 +448,137 @@
       ],
       "id": "1d60361e-e736-4c35-b733-3b70c40bd58b",
       "name": "Respond catalog"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "   https://tzbdpjqkhycsvnxodzlo.supabase.co/rest/v1/tryon_log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=   {\n     \"shop_id\": \"{{ $('Webhook start').item.json.body.shop_id }}\",\n     \"product_id\": {{ $('Get product image').item.json.id }},\n     \"job_id\": \"{{ $('FASHN start').item.json.id }}\"\n   }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        336,
+        192
+      ],
+      "id": "b17d644f-2eb4-4f26-aa3b-22899d433ba7",
+      "name": "Log start",
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "iMzh0yTxMiRcGe5X",
+          "name": "Supabase service_role"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://tzbdpjqkhycsvnxodzlo.supabase.co/rest/v1/tryon_log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "job_id",
+              "value": "=eq.{{ $('Webhook status').item.json.body.job_id }}"
+            },
+            {
+              "name": "status",
+              "value": "eq.started"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=   {\n     \"status\": \"completed\",\n     \"finished_at\": \"{{ $now.toISO() }}\"\n   }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -144,
+        432
+      ],
+      "id": "2a0f93a3-0b1d-41ba-8ead-c8cc8d5f21b3",
+      "name": "Log done",
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "iMzh0yTxMiRcGe5X",
+          "name": "Supabase service_role"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://tzbdpjqkhycsvnxodzlo.supabase.co/rest/v1/tryon_log",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "job_id",
+              "value": "=eq.{{ $('Webhook status').item.json.body.job_id }}"
+            },
+            {
+              "name": "status",
+              "value": "eq.started"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"failed\",\n  \"error\": {{ JSON.stringify($('FASHN status').item.json.error.name + ': ' + $('FASHN status').item.json.error.message) }},\n  \"finished_at\": \"{{ $now.toISO() }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -144,
+        608
+      ],
+      "id": "251e9d82-49bc-4bf3-9452-ec48e129d7eb",
+      "name": "Log failed",
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "iMzh0yTxMiRcGe5X",
+          "name": "Supabase service_role"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -600,14 +731,53 @@
           }
         ]
       ]
+    },
+    "Respond job started": {
+      "main": [
+        [
+          {
+            "node": "Log start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond done": {
+      "main": [
+        [
+          {
+            "node": "Log done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond failed": {
+      "main": [
+        [
+          {
+            "node": "Log failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1",
-    "binaryMode": "separate"
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "dmYIS3fItaGBTt5r"
   },
-  "versionId": "08ea9a83-40f2-41e0-b045-7ef2306764dd",
+  "versionId": "434f9b92-a121-44a0-acfd-63b5e78193a1",
   "meta": {
     "instanceId": "96028edfd73ceacc3a95497703a3cbad2bca48350b69f24243c6cfd50ab7bdec"
   },
