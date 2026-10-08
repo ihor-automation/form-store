@@ -6,8 +6,9 @@ Unlike the storefront, this part is deployed: the workflow runs on a hosted n8n 
 
 ```
 Shopper ⇄ fitting-room page (?shop=<id>) ⇄ [3 webhooks] ⇄ n8n
-                                                           ├── Supabase   shops, their products, per-shop usage
-                                                           └── FASHN      virtual try-on
+                                                           ├── Supabase   shops, products, per-shop usage, try-on log
+                                                           ├── FASHN      virtual try-on
+                                                           └── Telegram   failure alerts, from a separate error workflow
 ```
 
 The shop's own website is not touched. The shop gets a link; whether it sits behind a "Try it on" button, in an Instagram bio or in a message is up to the shop.
@@ -18,12 +19,12 @@ The shop's own website is not touched. The shop gets a link; whether it sits beh
 
 ```
 page/index.html    the fitting room: one file, no framework, no build step
-workflows/         the n8n workflow, downloaded from the hosted instance
-db/schema.sql      tryon_shops, tryon_products, tryon_usage
+workflows/         the try-on workflow and its error workflow, downloaded from the hosted instance
+db/schema.sql      tryon_shops, tryon_products, tryon_usage, tryon_log
 db/functions.sql   increment_tryon_usage, tryon_shop_catalog
 ```
 
-The workflow file carries credential names and ids, not their contents; it was checked for keys before it was committed.
+The workflow files carry credential names and ids, not their contents; they were checked for keys before they were committed. The Telegram chat id in `Error Handler.json` is a placeholder.
 
 The storefront's own try-on (`/workflows/M6 - Virtual Try-On.json`, `vton_usage`) is the single-shop original and still works on its own. This folder is its multi-shop successor, not a replacement.
 
@@ -38,11 +39,13 @@ The storefront's own try-on (`/workflows/M6 - Virtual Try-On.json`, `vton_usage`
 **3. The job starts.** `POST /tryon-start` with the shop id, the product id and the photo:
 
 ```
-Check daily limit → Limit OK? → Get product image → Product OK? → FASHN start → Respond job started
+Check daily limit → Limit OK? → Get product image → Product OK? → FASHN start → Respond job started → Log start
                         └ 429 daily_limit / shop_not_available     └ 400 vton_not_available
 ```
 
-**4. The page polls.** `POST /tryon-status` every three seconds until the job is `completed` or `failed`. A dropped poll is not treated as a failure; the page gives up after 150 seconds.
+**4. The page polls.** `POST /tryon-status` every three seconds until the job is `completed` or `failed`. A dropped poll is not treated as a failure; the page gives up after 150 seconds. On a final status the workflow answers the page first and then records the outcome in `tryon_log` (`Log done` or `Log failed`).
+
+**5. If a node fails,** n8n runs `Error Handler`, which sends the workflow name, the failing node and the error message to the owner's Telegram.
 
 ---
 
@@ -79,6 +82,20 @@ The webhooks are public, so the id is whatever a stranger put in a URL. Declared
 
 `tryon_shop_catalog` answers `shop_not_available` in both cases. The page cannot be used to find out which ids exist.
 
+### The log is written after the answer
+
+`Log start`, `Log done` and `Log failed` sit after the nodes that answer the page. The shopper gets the result first, so a slow or failed write to the log cannot delay or break a try-on. The log nodes keep n8n's default stop-on-error on purpose: a failed write does not reach the shopper, but it does reach the error workflow, so the owner hears about it.
+
+### An outcome is recorded once
+
+The page asks for the status every three seconds, and anyone can ask about an old job id. The update filters on `status=eq.started` as well as the job id, so only the first final answer changes the row and every later request matches nothing — the same idea as the stock guard in the store: the condition is part of the write.
+
+The provider's error text is passed through `JSON.stringify` before it goes into the request body, so quotes inside an error message cannot break the JSON.
+
+### Execution history lives 24 hours
+
+n8n keeps successful and failed executions so a fault can be traced, and the instance prunes them after 24 hours (`EXECUTIONS_DATA_MAX_AGE=24`). The request body — the shopper's photo included — is part of an execution, so this setting is what decides how long a photo stays on the server. The long-term record is `tryon_log`, which keeps what happened but not who it happened to.
+
 ---
 
 ## Adding a shop
@@ -100,13 +117,33 @@ The returned id goes into the link: `https://<page host>/?shop=<id>`.
 
 ---
 
+## Reading the log
+
+```sql
+select p.name,
+       count(*) as tries,
+       count(*) filter (where l.status = 'completed') as ok,
+       count(*) filter (where l.status = 'failed') as failed,
+       round(avg(extract(epoch from l.finished_at - l.created_at))) as avg_seconds
+from tryon_log l
+left join tryon_products p on p.id = l.product_id
+group by p.name
+order by tries desc;
+```
+
+Tries, outcomes and average wait per item.
+
+---
+
 ## Running your own copy
 
 **1. Database.** In the Supabase SQL editor run `db/schema.sql`, then `db/functions.sql`.
 
-**2. Workflow.** Import the file from `workflows/` into n8n and create two credentials: a **Custom Auth** credential carrying a Supabase secret (service-role) key, and a **Header Auth** credential carrying the FASHN key. Replace the Supabase project URL in the three HTTP nodes with your own, then publish the workflow.
+**2. Workflows.** Import both files from `workflows/` into n8n and create three credentials: a **Custom Auth** credential carrying a Supabase secret (service-role) key, a **Header Auth** credential carrying the FASHN key, and a **Telegram** credential carrying a bot token. Replace the Supabase project URL in the six HTTP nodes with your own, put your Telegram chat id into `Error Handler`, select `Error Handler` as the error workflow in the try-on workflow's settings, then publish the try-on workflow. The error workflow does not need publishing.
 
-**3. Page.** Set `API` at the top of the script in `page/index.html` to your n8n webhook base URL, put your own contact details in the dialog near the end of the markup (the WhatsApp number in this copy is a placeholder), and host the file anywhere that serves static files.
+**3. Execution history.** On the n8n instance set `EXECUTIONS_DATA_PRUNE=true` and `EXECUTIONS_DATA_MAX_AGE=24`.
+
+**4. Page.** Set `API` at the top of the script in `page/index.html` to your n8n webhook base URL, put your own contact details in the dialog near the end of the markup (the WhatsApp number in this copy is a placeholder), and host the file anywhere that serves static files.
 
 ---
 
@@ -114,7 +151,7 @@ The returned id goes into the link: `https://<page host>/?shop=<id>`.
 
 - **The per-person limit is soft.** Five try-ons per device per day, kept in `localStorage`; a private window resets it. The shop's daily cap on the server is the real budget control.
 - **The webhooks are public.** Anyone who has a shop's id can start try-ons for it until that shop's daily cap is reached.
-- **No table stores shopper photos.** A photo does travel through n8n on its way to the try-on provider, so whether a copy remains in n8n's execution history depends on that instance's execution-saving settings.
+- **Photos are kept for about a day.** No table stores them, but they travel through n8n, whose execution history is kept 24 hours for troubleshooting. The page tells shoppers that photos and results are deleted within 3 days, the result images being kept 3 days by the try-on provider.
 - **`tryon_prompt` is not wired in yet.** The column exists and the workflow reads it, but the request to the try-on API does not include it.
 - **Try-on does not model fit.** It shows how an item looks, not how a size sits, and the page says so.
 - **Catalogues are entered by hand.** There is no sync with a shop's own product feed.

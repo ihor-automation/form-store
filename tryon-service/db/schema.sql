@@ -6,7 +6,7 @@
 -- reads none of these, so either can be installed without the other.
 --
 -- Reconstructed from the live database (information_schema.columns and
--- pg_constraint). Only primary-key indexes exist.
+-- pg_constraint). Only primary-key and unique indexes exist.
 
 -- ---------------------------------------------------------------------------
 -- tryon_shops
@@ -68,9 +68,33 @@ CREATE TABLE public.tryon_usage (
 );
 
 -- ---------------------------------------------------------------------------
+-- tryon_log
+--
+-- One row per try-on that reached the try-on API: which shop, which item,
+-- the provider's job id, how it ended and when. It is the service's own
+-- record of what happened, and it deliberately holds no photo and no IP.
+--
+-- product_id is SET NULL on delete, not CASCADE: taking an item out of the
+-- catalogue should not erase the history of how often it was tried on.
+-- job_id is UNIQUE because the outcome is written by finding the row through
+-- it, and that has to match exactly one row.
+-- ---------------------------------------------------------------------------
+CREATE TABLE public.tryon_log (
+  id           bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  shop_id      uuid NOT NULL REFERENCES public.tryon_shops(id) ON DELETE CASCADE,
+  product_id   bigint REFERENCES public.tryon_products(id) ON DELETE SET NULL,
+  job_id       text NOT NULL UNIQUE,
+  status       text NOT NULL DEFAULT 'started'
+    CHECK (status IN ('started', 'completed', 'failed')),
+  error        text,
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  finished_at  timestamptz
+);
+
+-- ---------------------------------------------------------------------------
 -- Row level security
 --
--- Enabled on all three tables with no policies, which blocks the anon and
+-- Enabled on all four tables with no policies, which blocks the anon and
 -- authenticated roles completely. n8n connects with the service-role key,
 -- which bypasses RLS, so the browser can reach this data only through the
 -- webhooks.
@@ -78,3 +102,4 @@ CREATE TABLE public.tryon_usage (
 ALTER TABLE public.tryon_shops    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tryon_products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tryon_usage    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tryon_log      ENABLE ROW LEVEL SECURITY;
